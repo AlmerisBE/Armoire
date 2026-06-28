@@ -12,7 +12,6 @@ public class PenumbraStatusView : IUiComponent {
     }
 
     public void Draw() {
-        this.presenter.Tick();
 
         ImGui.TextDisabled("Penumbra Integration Status");
         ImGui.Spacing();

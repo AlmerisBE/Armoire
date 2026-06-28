@@ -2,33 +2,33 @@ namespace Armoire.Features.Penumbra.Core;
 
 using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Plugin;
-using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
+using global::Penumbra.Api.IpcSubscribers;
 using System;
-using System.Collections.Generic;
 
 public class PenumbraClient : IPenumbraClient {
     private readonly IDalamudPluginInterface pluginInterface;
     private readonly IPluginLog pluginLog;
 
-    private readonly ICallGateSubscriber<int> apiVersionSubscriber;
-    private readonly ICallGateSubscriber<IDictionary<string, string>> getModListSubscriber;
-    private readonly ICallGateSubscriber<string, (Guid, string)> getCollectionForCharacterSubscriber;
+    // Les souscriptions utilisent maintenant les types stricts de l'API Penumbra
+    private readonly ApiVersion apiVersionSubscriber;
+    private readonly GetModList getModListSubscriber;
+    private readonly GetCollectionForObject getCollectionForObjectSubscriber;
 
     public PenumbraClient(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog) {
         this.pluginInterface = pluginInterface;
         this.pluginLog = pluginLog;
 
-        this.apiVersionSubscriber = pluginInterface.GetIpcSubscriber<int>("Penumbra.ApiVersion");
-        this.getModListSubscriber = pluginInterface.GetIpcSubscriber<IDictionary<string, string>>("Penumbra.GetModList");
-
-        // Retour à la route IPC robuste basée sur le nom du personnage !
-        this.getCollectionForCharacterSubscriber = pluginInterface.GetIpcSubscriber<string, (Guid, string)>("Penumbra.GetCollectionForCharacter");
+        // Initialisation propre via le wrapper officiel
+        this.apiVersionSubscriber = new ApiVersion(pluginInterface);
+        this.getModListSubscriber = new GetModList(pluginInterface);
+        this.getCollectionForObjectSubscriber = new GetCollectionForObject(pluginInterface);
     }
 
     public bool IsEnabled() {
         try {
-            this.apiVersionSubscriber.InvokeFunc();
+            // Le wrapper s'occupe de tout
+            this.apiVersionSubscriber.Invoke();
             return true;
         } catch {
             return false;
@@ -41,23 +41,34 @@ public class PenumbraClient : IPenumbraClient {
         }
 
         try {
-            return this.getModListSubscriber.InvokeFunc()?.Count ?? 0;
+            var mods = this.getModListSubscriber.Invoke();
+            return mods?.Count ?? 0;
         } catch {
             return 0;
         }
     }
 
-    public (Guid Id, string Name) GetActiveCollection(string characterName) {
-        if (!IsEnabled() || string.IsNullOrEmpty(characterName)) {
+    public (Guid Id, string Name) GetActiveCollection() {
+        if (!IsEnabled()) {
             return (Guid.Empty, string.Empty);
         }
 
         try {
-            return this.getCollectionForCharacterSubscriber.InvokeFunc(characterName);
-        } catch (Dalamud.Plugin.Ipc.Exceptions.IpcNotReadyError) {
-            return (Guid.Empty, string.Empty);
+            // L'index 0 = Joueur local
+            var result = this.getCollectionForObjectSubscriber.Invoke(0);
+
+            // On extrait la collection effective du tuple renvoyé par l'API
+            var collection = result.EffectiveCollection;
+
+            if (collection.Id == Guid.Empty && string.IsNullOrEmpty(collection.Name)) {
+                return (Guid.Empty, string.Empty);
+            }
+
+            this.pluginLog.Info($"[PenumbraClient] Wrapper a retourné -> Id: {collection.Id}, Name: '{collection.Name}'");
+            return (collection.Id, collection.Name);
+
         } catch (Exception ex) {
-            this.pluginLog.Warning(ex, "Failed to retrieve active collection from Penumbra IPC.");
+            this.pluginLog.Warning(ex, "[PenumbraClient] L'API Penumbra n'est pas encore prête ou a échoué.");
             return (Guid.Empty, string.Empty);
         }
     }

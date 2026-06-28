@@ -16,7 +16,8 @@ public static class ServiceConfigurator {
         IDalamudPluginInterface pluginInterface,
         IPluginLog pluginLog,
         ICommandManager commandManager,
-        IObjectTable objectTable) {
+        IObjectTable objectTable,
+        IFramework framework) {
         var services = new ServiceCollection();
 
         // 1. Dalamud native services
@@ -24,6 +25,7 @@ public static class ServiceConfigurator {
         services.AddSingleton(pluginLog);
         services.AddSingleton(commandManager);
         services.AddSingleton(objectTable);
+        services.AddSingleton(framework);
 
         // 2. Core services
         services.AddSingleton<ConfigWindow>();
@@ -37,6 +39,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IPenumbraAnalyzer, PenumbraAnalyzer>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();
+        services.AddSingleton<PenumbraSyncManager>();
 
         // 4. Commands
         services.AddSingleton<IPluginCommand, MainCommand>();
