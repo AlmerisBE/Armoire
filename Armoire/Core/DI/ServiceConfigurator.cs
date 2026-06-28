@@ -33,6 +33,7 @@ public static class ServiceConfigurator {
 
         // 3. Features dependencies (Penumbra)
         services.AddSingleton<IPenumbraClient, PenumbraClient>();
+        services.AddSingleton<IPenumbraRepository, PenumbraRepository>();
         services.AddSingleton<IPenumbraAnalyzer, PenumbraAnalyzer>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();

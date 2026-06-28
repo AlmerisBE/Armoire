@@ -13,6 +13,7 @@ public class PenumbraStatusPresenterTests {
         // Arrange
         var mockAnalyzer = Substitute.For<IPenumbraAnalyzer>();
         var mockClient = Substitute.For<IPenumbraClient>();
+        var mockRepository = Substitute.For<IPenumbraRepository>();
         var mockObjectTable = Substitute.For<IObjectTable>();
 
         // On prépare l'objet de réponse simulé
@@ -26,7 +27,7 @@ public class PenumbraStatusPresenterTests {
         // On configure le mock pour renvoyer le modèle au lieu de la string
         mockAnalyzer.GetStatusReport().Returns(expectedStatus);
 
-        var presenter = new PenumbraStatusPresenter(mockAnalyzer, mockClient, mockObjectTable);
+        var presenter = new PenumbraStatusPresenter(mockAnalyzer, mockClient, mockRepository, mockObjectTable);
 
         // Act
         presenter.RefreshReport();

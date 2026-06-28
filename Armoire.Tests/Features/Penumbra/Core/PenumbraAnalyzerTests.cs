@@ -1,6 +1,7 @@
 namespace Armoire.Tests.Features.Penumbra.Core;
 
 using Armoire.Features.Penumbra.Core;
+using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
@@ -13,9 +14,10 @@ public class PenumbraAnalyzerTests {
         // Arrange
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(false);
+        var fauxRepository = Substitute.For<IPenumbraRepository>();
         var fauxObjectTable = Substitute.For<IObjectTable>();
 
-        var analyseur = new PenumbraAnalyzer(fauxClient, fauxObjectTable);
+        var analyseur = new PenumbraAnalyzer(fauxClient, fauxRepository, fauxObjectTable);
 
         // Act
         var resultat = analyseur.GetStatusReport();
@@ -30,18 +32,23 @@ public class PenumbraAnalyzerTests {
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(true);
         fauxClient.GetModsCount().Returns(42);
+        fauxClient.GetActiveCollection().Returns((Guid.NewGuid(), "Ysaline Sylv'anir"));
 
-        var hierarchieSimulee = new List<string> { "Ysaline Sylv'anir", "Default" };
-        // On simule le retour de notre nouveau tuple (Liste, Total, Actifs)
-        fauxClient.GetActiveCollectionDetails().Returns((hierarchieSimulee, 50, 30));
+        var fauxRepo = Substitute.For<IPenumbraRepository>();
+        var etatSimule = new EffectiveCollectionState();
+        etatSimule.HierarchyNames.Add("Ysaline Sylv'anir");
+        etatSimule.HierarchyNames.Add("Default");
+        etatSimule.EffectiveMods["Mod1"] = new Armoire.Features.Penumbra.Core.Domain.PenumbraMod { IsEnabled = true };
+        etatSimule.EffectiveMods["Mod2"] = new Armoire.Features.Penumbra.Core.Domain.PenumbraMod { IsEnabled = false };
+
+        fauxRepo.ComputeEffectiveState(Arg.Any<string>()).Returns(etatSimule);
 
         var fauxObjectTable = Substitute.For<IObjectTable>();
         var fauxJoueur = Substitute.For<IPlayerCharacter>();
-
         fauxJoueur.Name.Returns((Dalamud.Game.Text.SeStringHandling.SeString)"Almeris Test");
         fauxObjectTable.LocalPlayer.Returns(fauxJoueur);
 
-        var analyseur = new PenumbraAnalyzer(fauxClient, fauxObjectTable);
+        var analyseur = new PenumbraAnalyzer(fauxClient, fauxRepo, fauxObjectTable);
 
         // Act
         var resultat = analyseur.GetStatusReport();
@@ -49,9 +56,9 @@ public class PenumbraAnalyzerTests {
         // Assert
         Assert.True(resultat.IsEnabled);
         Assert.Equal(42, resultat.ModCount);
-        Assert.Equal(50, resultat.CollectionTotalMods);
-        Assert.Equal(30, resultat.CollectionEnabledMods);
+        Assert.Equal(2, resultat.CollectionTotalMods);
+        Assert.Equal(1, resultat.CollectionEnabledMods); // Seulement le "Mod1" est actif
         Assert.Equal("Almeris Test", resultat.PlayerName);
-        Assert.Equal(hierarchieSimulee, resultat.ActiveCollections);
+        Assert.Equal(etatSimule.HierarchyNames, resultat.ActiveCollections);
     }
 }
