@@ -33,7 +33,11 @@ public class PenumbraStatusPresenter {
         var currentPlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
         var currentModCount = this.penumbraClient.GetModsCount();
 
-        if (currentPlayerName != lastPlayerName || currentModCount != lastModCount) {
+        bool needsRetry = this.CurrentStatus.ActiveCollections.Count == 0
+                          && this.penumbraClient.IsEnabled()
+                          && !string.IsNullOrEmpty(currentPlayerName);
+
+        if (currentPlayerName != lastPlayerName || currentModCount != lastModCount || needsRetry) {
             lastPlayerName = currentPlayerName;
             lastModCount = currentModCount;
             RefreshReport();

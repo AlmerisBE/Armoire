@@ -15,7 +15,7 @@ public class PenumbraClient : IPenumbraClient {
 
     private readonly ICallGateSubscriber<int> apiVersionSubscriber;
     private readonly ICallGateSubscriber<IDictionary<string, string>> getModListSubscriber;
-    private readonly ICallGateSubscriber<int, (Guid, string)> getCollectionForObjectSubscriber;
+    private readonly ICallGateSubscriber<int, (string, string)> getCollectionForObjectSubscriber;
 
     public PenumbraClient(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog) {
         this.pluginInterface = pluginInterface;
@@ -23,8 +23,7 @@ public class PenumbraClient : IPenumbraClient {
 
         this.apiVersionSubscriber = pluginInterface.GetIpcSubscriber<int>("Penumbra.ApiVersion");
         this.getModListSubscriber = pluginInterface.GetIpcSubscriber<IDictionary<string, string>>("Penumbra.GetModList");
-
-        this.getCollectionForObjectSubscriber = pluginInterface.GetIpcSubscriber<int, (Guid, string)>("Penumbra.GetCollectionForObject");
+        this.getCollectionForObjectSubscriber = pluginInterface.GetIpcSubscriber<int, (string, string)>("Penumbra.GetCollectionForObject");
     }
 
     public bool IsEnabled() {
@@ -56,22 +55,38 @@ public class PenumbraClient : IPenumbraClient {
         }
 
         try {
-            // L'index 0 correspond au joueur local
-            var (activeId, activeName) = this.getCollectionForObjectSubscriber.InvokeFunc(0);
+            // Récupère les chaînes brutes de l'IPC
+            var (element1, element2) = this.getCollectionForObjectSubscriber.InvokeFunc(0);
 
-            // On remonte d'un dossier pour trouver les configurations de Penumbra
-            var penumbraDir = Path.Combine(this.pluginInterface.ConfigDirectory.Parent!.FullName, "Penumbra");
-            var collectionsDir = Path.Combine(penumbraDir, "collections");
+            // Identification dynamique du GUID et du Nom
+            string activeGuid = string.Empty;
+            string activeName = string.Empty;
 
-            if (Directory.Exists(collectionsDir)) {
-                var visited = new HashSet<string>();
-                ResolveInheritance(activeId.ToString(), collectionsDir, visited, hierarchy);
+            if (Guid.TryParse(element1, out _)) {
+                activeGuid = element1;
+                activeName = element2;
+            } else if (Guid.TryParse(element2, out _)) {
+                activeGuid = element2;
+                activeName = element1;
             } else {
-                hierarchy.Add(activeName); // Fallback de sécurité
+                activeName = element1;
+                activeGuid = element2;
+            }
+
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            var collectionsDir = Path.Combine(appData, "XIVLauncher", "pluginConfigs", "Penumbra", "collections");
+
+            if (Directory.Exists(collectionsDir) && !string.IsNullOrEmpty(activeGuid)) {
+                var visited = new HashSet<string>();
+                ResolveInheritance(activeGuid, collectionsDir, visited, hierarchy);
+            }
+
+            // Sécurité : si la lecture du disque échoue, on affiche au moins le nom de la collection principale Reçu par l'IPC
+            if (hierarchy.Count == 0 && !string.IsNullOrEmpty(activeName)) {
+                hierarchy.Add(activeName);
             }
         } catch (Dalamud.Plugin.Ipc.Exceptions.IpcNotReadyError) {
-            // L'IPC de Penumbra n'est pas encore prêt, on ignore silencieusement pour éviter le spam de log.
-            // Le Tick() de l'interface réessayera automatiquement 2 secondes plus tard !
+            // Ignoré proprement pendant le chargement initial
         } catch (Exception ex) {
             this.pluginLog.Warning(ex, "Failed to retrieve collection hierarchy from Penumbra.");
         }
@@ -80,7 +95,7 @@ public class PenumbraClient : IPenumbraClient {
     }
 
     private void ResolveInheritance(string collectionId, string collectionsDir, HashSet<string> visited, List<string> hierarchy) {
-        if (!visited.Add(collectionId)) {
+        if (string.IsNullOrEmpty(collectionId) || !visited.Add(collectionId)) {
             return;
         }
 
@@ -104,7 +119,7 @@ public class PenumbraClient : IPenumbraClient {
                 }
             }
         } catch {
-            // Si un fichier est corrompu, on l'ignore silencieusement
+            // Ignoré si le fichier est corrompu
         }
     }
 }
