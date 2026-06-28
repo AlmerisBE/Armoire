@@ -48,50 +48,62 @@ public class PenumbraClient : IPenumbraClient {
         }
     }
 
-    public List<string> GetActiveCollectionHierarchy() {
+    public (List<string> Hierarchy, int TotalMods, int EnabledMods) GetActiveCollectionDetails() {
         var hierarchy = new List<string>();
+        int totalMods = 0;
+        int enabledMods = 0;
+
         if (!IsEnabled()) {
-            return hierarchy;
+            return (hierarchy, totalMods, enabledMods);
         }
 
         try {
-            // Récupère les chaînes brutes de l'IPC
             var (element1, element2) = this.getCollectionForObjectSubscriber.InvokeFunc(0);
 
-            // Identification dynamique du GUID et du Nom
-            string activeGuid = string.Empty;
-            string activeName = string.Empty;
-
-            if (Guid.TryParse(element1, out _)) {
-                activeGuid = element1;
-                activeName = element2;
-            } else if (Guid.TryParse(element2, out _)) {
-                activeGuid = element2;
-                activeName = element1;
-            } else {
-                activeName = element1;
-                activeGuid = element2;
-            }
+            string activeGuid = Guid.TryParse(element1, out _) ? element1 : (Guid.TryParse(element2, out _) ? element2 : string.Empty);
+            string activeName = activeGuid == element1 ? element2 : element1;
 
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var collectionsDir = Path.Combine(appData, "XIVLauncher", "pluginConfigs", "Penumbra", "collections");
 
             if (Directory.Exists(collectionsDir) && !string.IsNullOrEmpty(activeGuid)) {
                 var visited = new HashSet<string>();
+                var filePath = Path.Combine(collectionsDir, $"{activeGuid}.json");
+
+                // Lecture de la collection principale pour extraire les statistiques de ses mods
+                if (File.Exists(filePath)) {
+                    try {
+                        var jsonContent = File.ReadAllText(filePath);
+                        using var doc = JsonDocument.Parse(jsonContent);
+                        var root = doc.RootElement;
+
+                        if (root.TryGetProperty("Settings", out var settingsProp) && settingsProp.ValueKind == JsonValueKind.Object) {
+                            foreach (var modProp in settingsProp.EnumerateObject()) {
+                                totalMods++;
+                                if (modProp.Value.TryGetProperty("Enabled", out var enabledProp) && enabledProp.GetBoolean()) {
+                                    enabledMods++;
+                                }
+                            }
+                        }
+                    } catch {
+                        // Ignoré si le fichier est temporairement verrouillé
+                    }
+                }
+
+                // Résolution de la hiérarchie d'héritage
                 ResolveInheritance(activeGuid, collectionsDir, visited, hierarchy);
             }
 
-            // Sécurité : si la lecture du disque échoue, on affiche au moins le nom de la collection principale Reçu par l'IPC
             if (hierarchy.Count == 0 && !string.IsNullOrEmpty(activeName)) {
                 hierarchy.Add(activeName);
             }
         } catch (Dalamud.Plugin.Ipc.Exceptions.IpcNotReadyError) {
-            // Ignoré proprement pendant le chargement initial
+            // Cycle de chargement attendu
         } catch (Exception ex) {
-            this.pluginLog.Warning(ex, "Failed to retrieve collection hierarchy from Penumbra.");
+            this.pluginLog.Warning(ex, "Failed to retrieve collection details.");
         }
 
-        return hierarchy;
+        return (hierarchy, totalMods, enabledMods);
     }
 
     private void ResolveInheritance(string collectionId, string collectionsDir, HashSet<string> visited, List<string> hierarchy) {
@@ -113,13 +125,13 @@ public class PenumbraClient : IPenumbraClient {
                 hierarchy.Add(nameProp.GetString() ?? "Unknown");
             }
 
-            if (root.TryGetProperty("Inheritances", out var inheritancesProp) && inheritancesProp.ValueKind == JsonValueKind.Array) {
-                foreach (var element in inheritancesProp.EnumerateArray()) {
+            if (root.TryGetProperty("Inheritance", out var inheritanceProp) && inheritanceProp.ValueKind == JsonValueKind.Array) {
+                foreach (var element in inheritanceProp.EnumerateArray()) {
                     ResolveInheritance(element.GetString()!, collectionsDir, visited, hierarchy);
                 }
             }
         } catch {
-            // Ignoré si le fichier est corrompu
+            // Ignoré si fichier corrompu
         }
     }
 }

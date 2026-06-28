@@ -22,18 +22,21 @@ public class PenumbraStatusView : IUiComponent {
         if (!status.IsEnabled) {
             ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.3f, 0.3f, 1.0f), "Penumbra est hors ligne ou non installé.");
         } else {
-            ImGui.Text($"Mods installés : {status.ModCount}");
+            ImGui.Text($"Total mods installés (Global) : {status.ModCount}");
 
             if (!status.IsPlayerConnected) {
                 ImGui.Text("Personnage : Aucun (Non connecté)");
             } else {
-                ImGui.Text($"Personnage : {status.PlayerName}");
+                ImGui.Text($"Personnage actif : {status.PlayerName}");
 
                 string collectionText = status.ActiveCollections.Any()
                     ? string.Join(" -> ", status.ActiveCollections)
                     : "Aucune collection active";
 
-                ImGui.Text($"Collections actives : {collectionText}");
+                ImGui.Text($"Hiérarchie des collections : {collectionText}");
+
+                // Affichage des statistiques de la collection active
+                ImGui.Text($"Mods de la collection : {status.CollectionEnabledMods} activés / {status.CollectionTotalMods} configurés");
             }
         }
 

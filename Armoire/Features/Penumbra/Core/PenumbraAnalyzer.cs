@@ -26,7 +26,10 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         result.PlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
         if (result.IsPlayerConnected) {
-            result.ActiveCollections = this.penumbraClient.GetActiveCollectionHierarchy();
+            var (hierarchy, totalMods, enabledMods) = this.penumbraClient.GetActiveCollectionDetails();
+            result.ActiveCollections = hierarchy;
+            result.CollectionTotalMods = totalMods;
+            result.CollectionEnabledMods = enabledMods;
         }
 
         return result;

@@ -16,5 +16,5 @@ public interface IPenumbraClient {
     /// <summary>
     /// Récupère les collections actives pour le personnage en ligne.
     /// </summary>
-    List<string> GetActiveCollectionHierarchy();
+    (List<string> Hierarchy, int TotalMods, int EnabledMods) GetActiveCollectionDetails();
 }
