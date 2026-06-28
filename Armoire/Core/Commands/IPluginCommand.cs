@@ -3,8 +3,7 @@ namespace Armoire.Core.Commands;
 /// <summary>
 /// Defines the structure of a chat command injected by a module.
 /// </summary>
-public interface IPluginCommand
-{
+public interface IPluginCommand {
     /// <summary>
     /// Gets the command trigger (e.g., "/armoire").
     /// </summary>

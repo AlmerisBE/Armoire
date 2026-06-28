@@ -1,7 +1,6 @@
 namespace Armoire.Features.Penumbra.Interfaces;
 
-public interface IPenumbraClient
-{
+public interface IPenumbraClient {
     /// <summary>
     /// Vérifie si Penumbra est installé, actif, et prêt à recevoir des commandes IPC.
     /// </summary>

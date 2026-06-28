@@ -4,14 +4,12 @@ using Xunit;
 
 namespace Armoire.Tests;
 
-public class LocalizationServiceTests : IDisposable
-{
+public class LocalizationServiceTests : IDisposable {
     private readonly string tempDirectory;
     private readonly string localesDirectory;
     private readonly IRuntimeEnvironment mockRuntime;
 
-    public LocalizationServiceTests()
-    {
+    public LocalizationServiceTests() {
         // 1. ARRANGE (Global Setup)
         // Create a unique temporary directory for this specific test run
         this.tempDirectory = Path.Combine(Path.GetTempPath(), "ArmoireTests_" + Guid.NewGuid().ToString());
@@ -30,19 +28,16 @@ public class LocalizationServiceTests : IDisposable
         this.mockRuntime.GetPluginDirectory().Returns(this.tempDirectory);
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         // CLEANUP
         // Delete the temporary directory and all its contents after each test
-        if (Directory.Exists(this.tempDirectory))
-        {
+        if (Directory.Exists(this.tempDirectory)) {
             Directory.Delete(this.tempDirectory, true);
         }
     }
 
     [Fact]
-    public void GetString_WhenKeyExists_ReturnsTranslatedString()
-    {
+    public void GetString_WhenKeyExists_ReturnsTranslatedString() {
         // Arrange
         this.mockRuntime.GetClientLanguage().Returns("En");
         var service = new LocalizationService(this.mockRuntime);
@@ -55,8 +50,7 @@ public class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetString_WhenKeyIsMissing_ReturnsTheKeyItself()
-    {
+    public void GetString_WhenKeyIsMissing_ReturnsTheKeyItself() {
         // Arrange
         this.mockRuntime.GetClientLanguage().Returns("En");
         var service = new LocalizationService(this.mockRuntime);
@@ -69,8 +63,7 @@ public class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
-    public void SetLanguage_WhenChangingLanguage_UpdatesTranslations()
-    {
+    public void SetLanguage_WhenChangingLanguage_UpdatesTranslations() {
         // Arrange
         this.mockRuntime.GetClientLanguage().Returns("En");
         var service = new LocalizationService(this.mockRuntime);
@@ -84,8 +77,7 @@ public class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetString_WhenFileIsMissing_ReturnsTheKeyItself()
-    {
+    public void GetString_WhenFileIsMissing_ReturnsTheKeyItself() {
         // Arrange
         // "De" json file was never created in our constructor
         this.mockRuntime.GetClientLanguage().Returns("De");

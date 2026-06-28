@@ -1,49 +1,42 @@
-using System;
 using Armoire.Features.MainApp.UI;
 using Dalamud.Interface.Windowing;
+using System;
 
-namespace Armoire.Core.UI
-{
-    public class WindowManager : IWindowManager, IDisposable
-    {
-        private readonly MainWindow mainWindow;
-        private readonly ConfigWindow configWindow;
-        private readonly WindowSystem windowSystem;
+namespace Armoire.Core.UI;
 
-        public WindowManager(MainWindow mainWindow, ConfigWindow configWindow)
-        {
-            this.mainWindow = mainWindow;
-            this.configWindow = configWindow;
+public class WindowManager : IWindowManager, IDisposable {
+    private readonly MainWindow mainWindow;
+    private readonly ConfigWindow configWindow;
+    private readonly WindowSystem windowSystem;
 
-            windowSystem = new WindowSystem("ArmoireWindowSystem");
-            windowSystem.AddWindow(this.mainWindow);
-            windowSystem.AddWindow(this.configWindow);
+    public WindowManager(MainWindow mainWindow, ConfigWindow configWindow) {
+        this.mainWindow = mainWindow;
+        this.configWindow = configWindow;
 
-            this.mainWindow.OnConfigRequested += ToggleConfigWindow;
-        }
+        windowSystem = new WindowSystem("ArmoireWindowSystem");
+        windowSystem.AddWindow(this.mainWindow);
+        windowSystem.AddWindow(this.configWindow);
 
-        public void ToggleMainWindow()
-        {
-            mainWindow.IsOpen = !mainWindow.IsOpen;
-        }
+        this.mainWindow.OnConfigRequested += ToggleConfigWindow;
+    }
 
-        public void ToggleConfigWindow()
-        {
-            configWindow.IsOpen = !configWindow.IsOpen;
-        }
+    public void ToggleMainWindow() {
+        mainWindow.IsOpen = !mainWindow.IsOpen;
+    }
 
-        public void Draw()
-        {
-            windowSystem.Draw();
-        }
+    public void ToggleConfigWindow() {
+        configWindow.IsOpen = !configWindow.IsOpen;
+    }
 
-        public void Dispose()
-        {
-            mainWindow.OnConfigRequested -= ToggleConfigWindow;
+    public void Draw() {
+        windowSystem.Draw();
+    }
 
-            windowSystem.RemoveAllWindows();
-            mainWindow.Dispose();
-            configWindow.Dispose();
-        }
+    public void Dispose() {
+        mainWindow.OnConfigRequested -= ToggleConfigWindow;
+
+        windowSystem.RemoveAllWindows();
+        mainWindow.Dispose();
+        configWindow.Dispose();
     }
 }

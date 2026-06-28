@@ -3,8 +3,7 @@ namespace Armoire.Core.Localization;
 /// <summary>
 /// Manages translations and provides localized strings for the user interface.
 /// </summary>
-public interface ILocalizationService
-{
+public interface ILocalizationService {
     /// <summary>
     /// Sets the active language for the plugin.
     /// </summary>

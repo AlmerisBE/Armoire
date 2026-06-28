@@ -1,28 +1,24 @@
 using Armoire.Core.UI;
 using Armoire.Features.MainApp.UI;
-using NSubstitute;
 using Xunit;
 
-namespace Armoire.Core.Tests.UI
-{
-    public class WindowManagerTests
-    {
-        [Fact]
-        public void OnConfigRequested_ShouldToggleConfigWindowVisibility()
-        {
-            // Arrange
-            var mainWindow = new MainWindow();
-            var configWindow = new ConfigWindow();
+namespace Armoire.Core.Tests.UI;
 
-            var windowManager = new WindowManager(mainWindow, configWindow);
+public class WindowManagerTests {
+    [Fact]
+    public void OnConfigRequested_ShouldToggleConfigWindowVisibility() {
+        // Arrange
+        var mainWindow = new MainWindow();
+        var configWindow = new ConfigWindow();
 
-            var initialState = configWindow.IsOpen;
+        var windowManager = new WindowManager(mainWindow, configWindow);
 
-            // Act
-            mainWindow.InvokeConfigRequested();
+        var initialState = configWindow.IsOpen;
 
-            // Assert
-            Assert.NotEqual(initialState, configWindow.IsOpen);
-        }
+        // Act
+        mainWindow.InvokeConfigRequested();
+
+        // Assert
+        Assert.NotEqual(initialState, configWindow.IsOpen);
     }
 }

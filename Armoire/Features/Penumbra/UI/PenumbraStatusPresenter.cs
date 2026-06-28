@@ -1,23 +1,19 @@
 using Armoire.Features.Penumbra.Interfaces;
 
-namespace Armoire.Features.Penumbra.UI
-{
-    public class PenumbraStatusPresenter
-    {
-        private readonly IPenumbraAnalyzer analyzer;
+namespace Armoire.Features.Penumbra.UI;
 
-        // Property to hold the UI state
-        public string CurrentReport { get; private set; }
+public class PenumbraStatusPresenter {
+    private readonly IPenumbraAnalyzer analyzer;
 
-        public PenumbraStatusPresenter(IPenumbraAnalyzer analyzer)
-        {
-            this.analyzer = analyzer;
-            CurrentReport = "Status unknown. Please refresh.";
-        }
+    // Property to hold the UI state
+    public string CurrentReport { get; private set; }
 
-        public void RefreshReport()
-        {
-            CurrentReport = analyzer.GetStatusReport();
-        }
+    public PenumbraStatusPresenter(IPenumbraAnalyzer analyzer) {
+        this.analyzer = analyzer;
+        CurrentReport = "Status unknown. Please refresh.";
+    }
+
+    public void RefreshReport() {
+        CurrentReport = analyzer.GetStatusReport();
     }
 }

@@ -1,30 +1,24 @@
-using Dalamud.Bindings.ImGui;
 using Armoire.Core.UI;
+using Dalamud.Bindings.ImGui;
 
-namespace Armoire.Features.Penumbra.UI
-{
-    public class PenumbraStatusView : IUiComponent
-    {
-        private readonly PenumbraStatusPresenter presenter;
+namespace Armoire.Features.Penumbra.UI;
 
-        public PenumbraStatusView(PenumbraStatusPresenter presenter)
-        {
-            this.presenter = presenter;
-        }
+public class PenumbraStatusView : IUiComponent {
+    private readonly PenumbraStatusPresenter presenter;
 
-        public void Draw()
-        {
-            if (ImGui.CollapsingHeader("Penumbra Integration Status"))
-            {
-                ImGui.TextUnformatted("Current Status:");
-                ImGui.Indent();
-                ImGui.TextWrapped(presenter.CurrentReport);
-                ImGui.Unindent();
+    public PenumbraStatusView(PenumbraStatusPresenter presenter) {
+        this.presenter = presenter;
+    }
 
-                if (ImGui.Button("Refresh Status"))
-                {
-                    presenter.RefreshReport();
-                }
+    public void Draw() {
+        if (ImGui.CollapsingHeader("Penumbra Integration Status")) {
+            ImGui.TextUnformatted("Current Status:");
+            ImGui.Indent();
+            ImGui.TextWrapped(presenter.CurrentReport);
+            ImGui.Unindent();
+
+            if (ImGui.Button("Refresh Status")) {
+                presenter.RefreshReport();
             }
         }
     }

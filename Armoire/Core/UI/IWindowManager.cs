@@ -5,8 +5,7 @@ namespace Armoire.Core.UI;
 /// <summary>
 /// Gère le cycle de vie et l'affichage des fenêtres de l'interface utilisateur.
 /// </summary>
-public interface IWindowManager : IDisposable
-{
+public interface IWindowManager : IDisposable {
     /// <summary>
     /// Alterne l'état d'affichage de la fenêtre principale.
     /// </summary>
