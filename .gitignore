@@ -2,3 +2,10 @@
 obj/
 bin/
 *.user
+/BuildCoverage.bat
+/coverlet.runsettings
+/GenerateSnapshot.ps1
+/Snapshot_Core_Only.bat
+/Snapshot_With_tests.bat
+/Armoire_Full_Snapshot.txt
+/Armoire_Core_Snapshot.txt

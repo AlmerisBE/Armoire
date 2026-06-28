@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11919.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Armoire", "Armoire\Armoire.csproj", "{13C812E9-0D42-4B95-8646-40EEBF30636F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Armoire.Tests", "Armoire.Tests\Armoire.Tests.csproj", "{2683DB14-2945-43E2-B03B-2CF0E56C132A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Éléments de solution", "Éléments de solution", "{A47D260D-7EDF-4E68-8251-A81C6A1EDEE1}"
+	ProjectSection(SolutionItems) = preProject
+		BuildCoverage.bat = BuildCoverage.bat
+		coverlet.runsettings = coverlet.runsettings
+		GenerateSnapshot.ps1 = GenerateSnapshot.ps1
+		Snapshot_Core_Only.bat = Snapshot_Core_Only.bat
+		Snapshot_With_tests.bat = Snapshot_With_tests.bat
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Debug|x64.ActiveCfg = Debug|x64
+		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Debug|x64.Build.0 = Debug|x64
+		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Release|x64.ActiveCfg = Release|x64
+		{13C812E9-0D42-4B95-8646-40EEBF30636F}.Release|x64.Build.0 = Release|x64
+		{2683DB14-2945-43E2-B03B-2CF0E56C132A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2683DB14-2945-43E2-B03B-2CF0E56C132A}.Debug|x64.Build.0 = Debug|Any CPU
+		{2683DB14-2945-43E2-B03B-2CF0E56C132A}.Release|x64.ActiveCfg = Release|Any CPU
+		{2683DB14-2945-43E2-B03B-2CF0E56C132A}.Release|x64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B17E85B1-5F60-4440-9F9A-3DDE877E8CDF}
+	EndGlobalSection
+EndGlobal
