@@ -26,7 +26,7 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         }
 
         result.IsEnabled = true;
-        result.ModCount = this.penumbraClient.GetRawModsList().Count;
+        result.ModCount = this.penumbraClient.GetModsCount();
         result.PlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
         if (result.IsPlayerConnected) {

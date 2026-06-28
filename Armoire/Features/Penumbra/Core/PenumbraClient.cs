@@ -39,15 +39,7 @@ public class PenumbraClient : IPenumbraClient {
     }
 
     public int GetModsCount() {
-        if (!IsEnabled()) {
-            return 0;
-        }
-
-        try {
-            return this.getModListSubscriber.Invoke()?.Count ?? 0;
-        } catch {
-            return 0;
-        }
+        return this.GetRawModsList().Count;
     }
 
     public (Guid Id, string Name) GetActiveCollection() {

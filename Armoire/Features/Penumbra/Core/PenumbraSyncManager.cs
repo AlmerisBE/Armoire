@@ -49,7 +49,7 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
         lastCheckTime = DateTime.Now;
 
         var currentPlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
-        var currentModCount = this.penumbraClient.GetModsCount();
+        var currentModCount = this.penumbraClient.GetRawModsList().Count;
 
         bool hasChanged = currentPlayerName != lastPlayerName || currentModCount != lastModCount;
         bool needsRetry = this.penumbraClient.IsEnabled() && !string.IsNullOrEmpty(currentPlayerName) && this.lastPlayerName == string.Empty;
