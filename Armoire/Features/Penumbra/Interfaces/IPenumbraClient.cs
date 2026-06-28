@@ -5,5 +5,5 @@ using System;
 public interface IPenumbraClient {
     bool IsEnabled();
     int GetModsCount();
-    (Guid Id, string Name) GetActiveCollection();
+    (Guid Id, string Name) GetActiveCollection(string characterName);
 }

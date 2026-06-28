@@ -32,7 +32,7 @@ public class PenumbraAnalyzerTests {
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(true);
         fauxClient.GetModsCount().Returns(42);
-        fauxClient.GetActiveCollection().Returns((Guid.NewGuid(), "Ysaline Sylv'anir"));
+        fauxClient.GetActiveCollection(Arg.Any<string>()).Returns((Guid.NewGuid(), "Ysaline Sylv'anir"));
 
         var fauxRepo = Substitute.For<IPenumbraRepository>();
         var etatSimule = new EffectiveCollectionState();

@@ -13,7 +13,7 @@ public class PenumbraClient : IPenumbraClient {
 
     private readonly ICallGateSubscriber<int> apiVersionSubscriber;
     private readonly ICallGateSubscriber<IDictionary<string, string>> getModListSubscriber;
-    private readonly ICallGateSubscriber<int, (Guid, string)> getCollectionForObjectSubscriber;
+    private readonly ICallGateSubscriber<string, (Guid, string)> getCollectionForCharacterSubscriber;
 
     public PenumbraClient(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog) {
         this.pluginInterface = pluginInterface;
@@ -22,7 +22,8 @@ public class PenumbraClient : IPenumbraClient {
         this.apiVersionSubscriber = pluginInterface.GetIpcSubscriber<int>("Penumbra.ApiVersion");
         this.getModListSubscriber = pluginInterface.GetIpcSubscriber<IDictionary<string, string>>("Penumbra.GetModList");
 
-        this.getCollectionForObjectSubscriber = pluginInterface.GetIpcSubscriber<int, (Guid, string)>("Penumbra.GetCollectionForObject");
+        // Retour à la route IPC robuste basée sur le nom du personnage !
+        this.getCollectionForCharacterSubscriber = pluginInterface.GetIpcSubscriber<string, (Guid, string)>("Penumbra.GetCollectionForCharacter");
     }
 
     public bool IsEnabled() {
@@ -46,13 +47,13 @@ public class PenumbraClient : IPenumbraClient {
         }
     }
 
-    public (Guid Id, string Name) GetActiveCollection() {
-        if (!IsEnabled()) {
+    public (Guid Id, string Name) GetActiveCollection(string characterName) {
+        if (!IsEnabled() || string.IsNullOrEmpty(characterName)) {
             return (Guid.Empty, string.Empty);
         }
 
         try {
-            return this.getCollectionForObjectSubscriber.InvokeFunc(0);
+            return this.getCollectionForCharacterSubscriber.InvokeFunc(characterName);
         } catch (Dalamud.Plugin.Ipc.Exceptions.IpcNotReadyError) {
             return (Guid.Empty, string.Empty);
         } catch (Exception ex) {

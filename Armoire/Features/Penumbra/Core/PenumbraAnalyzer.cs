@@ -29,18 +29,15 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         result.PlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
         if (result.IsPlayerConnected) {
-            var activeCollection = this.penumbraClient.GetActiveCollection();
+            // On passe le nom du personnage à la requête
+            var activeCollection = this.penumbraClient.GetActiveCollection(result.PlayerName);
 
-            // On demande l'état effectif au Repository en mémoire !
             var effectiveState = this.penumbraRepository.ComputeEffectiveState(activeCollection.Id.ToString());
 
             result.ActiveCollections = effectiveState.HierarchyNames;
             result.CollectionTotalMods = effectiveState.EffectiveMods.Count;
-
-            // On compte uniquement les mods dont IsEnabled est à "true"
             result.CollectionEnabledMods = effectiveState.EffectiveMods.Values.Count(m => m.IsEnabled);
 
-            // Fallback si le repository n'a pas encore eu le temps de charger
             if (result.ActiveCollections.Count == 0 && !string.IsNullOrEmpty(activeCollection.Name)) {
                 result.ActiveCollections.Add(activeCollection.Name);
             }
