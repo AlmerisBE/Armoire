@@ -3,107 +3,181 @@
 using Armoire.Features.Penumbra.Core.Domain;
 using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;
+using Dalamud.Interface.ImGuiNotification; // For Notification configuration
 using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
-public class ModScannerManager : IModScannerManager {
+public class ModScannerManager : IModScannerManager, IDisposable {
     private readonly IPenumbraClient penumbraClient;
     private readonly IPluginLog pluginLog;
-    private Dictionary<string, ArmoireModCacheEntry> modCache = new();
-    private bool isScanning = false;
+    private readonly INotificationManager notificationManager;
 
-    public bool IsScanning => this.isScanning;
+    private Dictionary<string, ArmoireModCacheEntry> modCache = new();
+
+    private int totalMods = 0;
+    private int processedMods = 0;
+    private int errorCount = 0;
+
+    // Thread control mechanisms
+    private CancellationTokenSource? cancellationTokenSource;
+    private readonly ManualResetEventSlim pauseEvent = new(true); // true = running (green light)
+
+    public ScanState State { get; private set; } = ScanState.Idle;
+    public int TotalMods => this.totalMods;
+    public int ProcessedMods => this.processedMods;
+    public int ErrorCount => this.errorCount;
+
     public IReadOnlyDictionary<string, ArmoireModCacheEntry> ModCache => this.modCache;
 
-    public ModScannerManager(IPenumbraClient penumbraClient, IPluginLog pluginLog) {
+    public ModScannerManager(IPenumbraClient penumbraClient, IPluginLog pluginLog, INotificationManager notificationManager) {
         this.penumbraClient = penumbraClient;
         this.pluginLog = pluginLog;
+        this.notificationManager = notificationManager;
     }
 
-    public async Task ScanModsAsync() {
-        if (this.isScanning) {
+    public async Task StartScanAsync() {
+        if (this.State != ScanState.Idle) {
             return;
         }
 
-        this.isScanning = true;
+        var modDirectory = this.penumbraClient.GetModDirectory();
+        if (string.IsNullOrEmpty(modDirectory) || !Directory.Exists(modDirectory)) {
+            SendNotification("Scanner Error", "Penumbra mod directory not found.", NotificationType.Error);
+            return;
+        }
+
+        var directories = Directory.GetDirectories(modDirectory);
+        this.totalMods = directories.Length;
+        this.processedMods = 0;
+        this.errorCount = 0;
+        this.State = ScanState.Scanning;
+
+        this.cancellationTokenSource = new CancellationTokenSource();
+        this.pauseEvent.Set(); // Ensure the light is green
+
+        var newCache = new ConcurrentDictionary<string, ArmoireModCacheEntry>();
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var token = this.cancellationTokenSource.Token;
 
         try {
             await Task.Run(() => {
-                var modDirectory = this.penumbraClient.GetModDirectory();
+                var parallelOptions = new ParallelOptions {
+                    CancellationToken = token,
+                    MaxDegreeOfParallelism = Environment.ProcessorCount
+                };
 
-                if (string.IsNullOrEmpty(modDirectory) || !Directory.Exists(modDirectory)) {
-                    this.pluginLog.Warning("[ModScannerManager] Penumbra mod directory is not found or empty.");
-                    return;
-                }
+                Parallel.ForEach(directories, parallelOptions, dir => {
+                    // Block the thread here if pauseEvent.Reset() was called by the user
+                    this.pauseEvent.Wait(token);
 
-                this.pluginLog.Info($"[ModScannerManager] Starting parallel scan of mods in: {modDirectory}");
-
-                var directories = Directory.GetDirectories(modDirectory);
-                var newCache = new ConcurrentDictionary<string, ArmoireModCacheEntry>();
-                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                // Use parallel processing to parse thousands of JSON files instantly
-                Parallel.ForEach(directories, dir => {
                     var dirName = Path.GetFileName(dir);
-                    var entry = new ArmoireModCacheEntry {
-                        DirectoryName = dirName
-                    };
+                    var entry = new ArmoireModCacheEntry { DirectoryName = dirName };
+                    bool hasError = false;
 
-                    // 1. Parse meta.json for the human-readable name
-                    var metaPath = Path.Combine(dir, "meta.json");
-                    if (File.Exists(metaPath)) {
-                        try {
-                            var metaJson = File.ReadAllText(metaPath);
-                            var metaData = JsonSerializer.Deserialize<PenumbraMetaJson>(metaJson, jsonOptions);
+                    try {
+                        var metaPath = Path.Combine(dir, "meta.json");
+                        if (File.Exists(metaPath)) {
+                            var metaData = JsonSerializer.Deserialize<PenumbraMetaJson>(File.ReadAllText(metaPath), jsonOptions);
                             if (metaData != null) {
                                 entry.ModName = metaData.Name;
                             }
-                        } catch {
-                            // Silently ignore corrupted meta.json files
                         }
-                    }
 
-                    // Fallback to directory name if meta.json is missing or unnamed
-                    if (string.IsNullOrEmpty(entry.ModName)) {
-                        entry.ModName = dirName;
-                    }
+                        if (string.IsNullOrEmpty(entry.ModName)) {
+                            entry.ModName = dirName;
+                        }
 
-                    // 2. Parse default_mod.json for replaced game paths
-                    var defaultModPath = Path.Combine(dir, "default_mod.json");
-                    if (File.Exists(defaultModPath)) {
-                        try {
-                            var defaultJson = File.ReadAllText(defaultModPath);
-                            var defaultData = JsonSerializer.Deserialize<PenumbraDefaultModJson>(defaultJson, jsonOptions);
-
+                        var defaultModPath = Path.Combine(dir, "default_mod.json");
+                        if (File.Exists(defaultModPath)) {
+                            var defaultData = JsonSerializer.Deserialize<PenumbraDefaultModJson>(File.ReadAllText(defaultModPath), jsonOptions);
                             if (defaultData != null) {
-                                foreach (var gamePath in defaultData.Files.Keys) {
-                                    entry.ModifiedGamePaths.Add(gamePath);
+                                foreach (var path in defaultData.Files.Keys) {
+                                    entry.ModifiedGamePaths.Add(path);
                                 }
-                                foreach (var gamePath in defaultData.FileSwaps.Keys) {
-                                    entry.ModifiedGamePaths.Add(gamePath);
+
+                                foreach (var path in defaultData.FileSwaps.Keys) {
+                                    entry.ModifiedGamePaths.Add(path);
                                 }
                             }
-                        } catch {
-                            // Silently ignore corrupted default_mod.json files
                         }
+                    } catch {
+                        hasError = true;
+                    }
+
+                    if (hasError) {
+                        Interlocked.Increment(ref this.errorCount);
                     }
 
                     newCache[dirName] = entry;
-                });
 
-                // Safely swap the old cache with the newly built one
-                this.modCache = new Dictionary<string, ArmoireModCacheEntry>(newCache);
-                this.pluginLog.Info($"[ModScannerManager] Scan complete. {this.modCache.Count} mods indexed.");
-            });
+                    Interlocked.Increment(ref this.processedMods);
+                });
+            }, token);
+
+            // If we reach this point, scan completed successfully
+            this.modCache = new Dictionary<string, ArmoireModCacheEntry>(newCache);
+            SendNotification("Scan Complete", $"Successfully scanned {this.ProcessedMods} mods. Errors: {this.ErrorCount}", NotificationType.Success);
+
+        } catch (OperationCanceledException) {
+            this.pluginLog.Info("[ModScannerManager] Scan was canceled by the user.");
+            SendNotification("Scan Canceled", $"Scan aborted at {this.ProcessedMods}/{this.TotalMods}.", NotificationType.Warning);
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, "[ModScannerManager] A fatal error occurred during the mod scanning process.");
+            this.pluginLog.Error(ex, "[ModScannerManager] Fatal error during scan.");
+            SendNotification("Scan Failed", "An unexpected error occurred. Check logs.", NotificationType.Error);
         } finally {
-            this.isScanning = false;
+            ResetState();
         }
+    }
+
+    public void PauseScan() {
+        if (this.State != ScanState.Scanning) {
+            return;
+        }
+
+        this.pauseEvent.Reset(); // Turn light to red
+        this.State = ScanState.Paused;
+    }
+
+    public void ResumeScan() {
+        if (this.State != ScanState.Paused) {
+            return;
+        }
+
+        this.pauseEvent.Set(); // Turn light to green
+        this.State = ScanState.Scanning;
+    }
+
+    public void CancelScan() {
+        if (this.State == ScanState.Idle) {
+            return;
+        }
+
+        this.cancellationTokenSource?.Cancel();
+    }
+
+    private void ResetState() {
+        this.State = ScanState.Idle;
+        this.cancellationTokenSource?.Dispose();
+        this.cancellationTokenSource = null;
+    }
+
+    private void SendNotification(string title, string content, NotificationType type) {
+        this.notificationManager.AddNotification(new Notification {
+            Title = title,
+            Content = content,
+            Type = type,
+            Minimized = false
+        });
+    }
+
+    public void Dispose() {
+        CancelScan();
+        this.pauseEvent.Dispose();
     }
 }

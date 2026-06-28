@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 public interface IModScannerManager {
-    // Indicates if a background scan is currently running
-    bool IsScanning { get; }
+    ScanState State { get; }
+    int TotalMods { get; }
+    int ProcessedMods { get; }
+    int ErrorCount { get; }
 
-    // The in-memory cache of all installed mods and their affected paths
     IReadOnlyDictionary<string, ArmoireModCacheEntry> ModCache { get; }
 
-    // Triggers an asynchronous scan of the Penumbra mods directory
-    Task ScanModsAsync();
+    Task StartScanAsync();
+    void PauseScan();
+    void ResumeScan();
+    void CancelScan();
 }
