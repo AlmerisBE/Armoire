@@ -47,6 +47,7 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
             result.ActiveCollections = effectiveState.HierarchyNames;
             result.CollectionTotalMods = effectiveState.EffectiveMods.Count;
             result.CollectionEnabledMods = effectiveState.EffectiveMods.Values.Count(m => m.IsEnabled);
+            result.ConflictModCount = effectiveState.ConflictModCount;
 
             if (result.ActiveCollections.Count == 0 && !string.IsNullOrEmpty(activeCollection.Name)) {
                 result.ActiveCollections.Add(activeCollection.Name);

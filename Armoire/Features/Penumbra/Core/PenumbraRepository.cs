@@ -12,23 +12,24 @@ using System.Threading.Tasks;
 
 public class PenumbraRepository : IPenumbraRepository, IDisposable {
     private readonly IPluginLog pluginLog;
-    private readonly Dictionary<string, PenumbraCollection> collectionCache = new();
+    private readonly IModScannerManager modScannerManager;
+    private readonly Dictionary<string, PenumbraCollection> collectionCache = [];
     private readonly FileSystemWatcher? watcher;
 
     private bool isLoading = false;
-    private bool isStale = true; // Vrai au démarrage pour forcer la première lecture
+    private bool isStale = true;
 
     public bool IsLoading => isLoading;
     public bool IsStale => isStale;
 
-    public PenumbraRepository(IPluginLog pluginLog) {
+    public PenumbraRepository(IPluginLog pluginLog, IModScannerManager modScannerManager) {
         this.pluginLog = pluginLog;
+        this.modScannerManager = modScannerManager;
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var collectionsDir = Path.Combine(appData, "XIVLauncher", "pluginConfigs", "Penumbra", "collections");
 
         if (Directory.Exists(collectionsDir)) {
-            // Configuration du watcher pour écouter les sauvegardes de Penumbra
             this.watcher = new FileSystemWatcher(collectionsDir, "*.json") {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime,
                 EnableRaisingEvents = true
@@ -41,18 +42,14 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
     }
 
     private void OnCollectionFileChanged(object sender, FileSystemEventArgs e) {
-        // Ignorer les fichiers temporaires créés par Penumbra lors des sauvegardes
         if (e.FullPath.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)) {
             return;
         }
 
-        this.pluginLog.Debug($"[PenumbraRepository] Fichier modifié détecté par le système : {e.Name}");
         this.isStale = true;
     }
 
-    public void MarkStale() {
-        this.isStale = true;
-    }
+    public void MarkStale() => this.isStale = true;
 
     public PenumbraCollection? GetCollection(string collectionId) {
         if (string.IsNullOrEmpty(collectionId)) {
@@ -62,9 +59,7 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         return collectionCache.TryGetValue(collectionId, out var collection) ? collection : null;
     }
 
-    public IEnumerable<PenumbraCollection> GetAllCollections() {
-        return this.collectionCache.Values;
-    }
+    public IEnumerable<PenumbraCollection> GetAllCollections() => this.collectionCache.Values;
 
     public async Task SyncDataAsync() {
         if (isLoading || !isStale) {
@@ -75,9 +70,7 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
 
         try {
             await Task.Run(() => {
-                this.pluginLog.Info("[PenumbraRepository] Démarrage de la synchronisation asynchrone des collections sur le disque.");
                 var newCache = new Dictionary<string, PenumbraCollection>();
-
                 var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 var collectionsDir = Path.Combine(appData, "XIVLauncher", "pluginConfigs", "Penumbra", "collections");
 
@@ -86,7 +79,6 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                 }
 
                 var files = Directory.GetFiles(collectionsDir, "*.json");
-
                 foreach (var file in files) {
                     try {
                         var fileName = Path.GetFileNameWithoutExtension(file);
@@ -112,7 +104,6 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                             foreach (var modProp in settingsProp.EnumerateObject()) {
                                 var modId = modProp.Name;
                                 var modData = modProp.Value;
-
                                 var mod = new PenumbraMod {
                                     Id = modId,
                                     Name = modId,
@@ -130,9 +121,8 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                                 collection.LocalSettings[modId] = mod;
                             }
                         }
-
                         newCache[collection.Id] = collection;
-                    } catch (Exception) { /* Ignoré silencieusement pour ne pas spammer si le fichier est verrouillé une fraction de seconde */ }
+                    } catch { /* Suppress runtime transient disk locks */ }
                 }
 
                 collectionCache.Clear();
@@ -140,12 +130,8 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                     collectionCache[kvp.Key] = kvp.Value;
                 }
 
-                // Le cache est désormais à jour
                 this.isStale = false;
-                this.pluginLog.Info($"[PenumbraRepository] Synchronisation terminée. {collectionCache.Count} collections chargées en mémoire.");
             });
-        } catch (Exception ex) {
-            this.pluginLog.Error(ex, "[PenumbraRepository] Erreur fatale lors de la synchronisation.");
         } finally {
             isLoading = false;
         }
@@ -154,14 +140,14 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
     public EffectiveCollectionState ComputeEffectiveState(string activeCollectionId) {
         var state = new EffectiveCollectionState();
         var visited = new HashSet<string>();
-
         var lineage = new List<PenumbraCollection>();
+
         BuildLineage(activeCollectionId, visited, lineage);
         lineage.Reverse();
 
+        // 1. Resolve basic enablement hierarchy
         foreach (var collection in lineage) {
             state.HierarchyNames.Add(collection.Name);
-
             foreach (var kvp in collection.LocalSettings) {
                 var modId = kvp.Key;
                 var localModData = kvp.Value;
@@ -176,6 +162,38 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
             }
         }
 
+        // 2. Compute dynamic file conflicts using scanner cache entries
+        var globalFileOwnership = new Dictionary<string, (string ModId, int Priority)>(StringComparer.OrdinalIgnoreCase);
+        var conflictingMods = new HashSet<string>();
+        var scannerCache = this.modScannerManager.ModCache;
+
+        // Sort mods by priority to evaluate the baseline correctly
+        var evaluatedMods = new List<PenumbraMod>();
+        foreach (var mod in state.EffectiveMods.Values) {
+            if (mod.IsEnabled) {
+                evaluatedMods.Add(mod);
+            }
+        }
+        evaluatedMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+        foreach (var mod in evaluatedMods) {
+            // Find the file list inside our scanner manager cache
+            if (scannerCache.TryGetValue(mod.Id, out var cachedModData)) {
+                foreach (var gamePath in cachedModData.ModifiedGamePaths) {
+                    if (globalFileOwnership.TryGetValue(gamePath, out var ownerInfo)) {
+                        // Conflict found! A mod with higher or equal priority already claimed this file
+                        if (ownerInfo.Priority >= mod.Priority) {
+                            conflictingMods.Add(mod.Id);
+                        }
+                    } else {
+                        // Register ownership for lower priority checks
+                        globalFileOwnership[gamePath] = (mod.Id, mod.Priority);
+                    }
+                }
+            }
+        }
+
+        state.ConflictModCount = conflictingMods.Count;
         return state;
     }
 
