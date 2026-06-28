@@ -10,4 +10,9 @@ public interface IPenumbraClient {
     /// Récupère le nombre total de mods installés dans Penumbra.
     /// </summary>
     int GetModsCount();
+
+    /// <summary>
+    /// Récupère le nom de la collection active pour un personnage donné.
+    /// </summary>
+    string? GetCollectionForCharacter(string characterName);
 }

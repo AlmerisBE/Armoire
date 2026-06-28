@@ -15,13 +15,15 @@ public static class ServiceConfigurator {
     public static ServiceProvider ConfigureServices(
         IDalamudPluginInterface pluginInterface,
         IPluginLog pluginLog,
-        ICommandManager commandManager) {
+        ICommandManager commandManager,
+        IObjectTable objectTable) {
         var services = new ServiceCollection();
 
         // 1. Dalamud native services
         services.AddSingleton(pluginInterface);
         services.AddSingleton(pluginLog);
         services.AddSingleton(commandManager);
+        services.AddSingleton(objectTable);
 
         // 2. Core services
         services.AddSingleton<ConfigWindow>();

@@ -11,15 +11,14 @@ public class PenumbraStatusView : IUiComponent {
     }
 
     public void Draw() {
-        if (ImGui.CollapsingHeader("Penumbra Integration Status")) {
-            ImGui.TextUnformatted("Current Status:");
-            ImGui.Indent();
-            ImGui.TextWrapped(presenter.CurrentReport);
-            ImGui.Unindent();
+        ImGui.TextDisabled("Penumbra Integration Status");
+        ImGui.Spacing();
 
-            if (ImGui.Button("Refresh Status")) {
-                presenter.RefreshReport();
-            }
+        ImGui.TextWrapped(presenter.CurrentReport);
+        ImGui.Spacing();
+
+        if (ImGui.Button("Refresh Status")) {
+            presenter.RefreshReport();
         }
     }
 }

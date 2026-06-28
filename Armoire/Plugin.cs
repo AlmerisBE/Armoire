@@ -20,10 +20,12 @@ public sealed class Plugin : IDalamudPlugin {
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         IPluginLog pluginLog,
-        ICommandManager commandManager) {
+        ICommandManager commandManager,
+        IObjectTable objectTable) {
+
         this.pluginInterface = pluginInterface;
 
-        serviceProvider = ServiceConfigurator.ConfigureServices(pluginInterface, pluginLog, commandManager);
+        serviceProvider = ServiceConfigurator.ConfigureServices(pluginInterface, pluginLog, commandManager, objectTable);
 
         mainWindow = serviceProvider.GetRequiredService<MainWindow>();
         windowManager = serviceProvider.GetRequiredService<IWindowManager>();

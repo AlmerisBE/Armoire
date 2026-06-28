@@ -1,12 +1,15 @@
-using Armoire.Features.Penumbra.Interfaces;
-
 namespace Armoire.Features.Penumbra.Core;
+
+using Armoire.Features.Penumbra.Interfaces;
+using Dalamud.Plugin.Services;
 
 public class PenumbraAnalyzer : IPenumbraAnalyzer {
     private readonly IPenumbraClient penumbraClient;
+    private readonly IObjectTable objectTable;
 
-    public PenumbraAnalyzer(IPenumbraClient penumbraClient) {
+    public PenumbraAnalyzer(IPenumbraClient penumbraClient, IObjectTable objectTable) {
         this.penumbraClient = penumbraClient;
+        this.objectTable = objectTable;
     }
 
     public string GetStatusReport() {
@@ -15,6 +18,15 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         }
 
         int modCount = this.penumbraClient.GetModsCount();
-        return $"Penumbra est connecté. Mods installés : {modCount}";
+
+        var playerName = this.objectTable.LocalPlayer?.Name.TextValue;
+
+        if (string.IsNullOrEmpty(playerName)) {
+            return $"Penumbra est connecté. Mods installés : {modCount}\nPersonnage : Aucun (Non connecté)";
+        }
+
+        var collectionName = this.penumbraClient.GetCollectionForCharacter(playerName) ?? "Collection par défaut";
+
+        return $"Penumbra est connecté. Mods installés : {modCount}\nPersonnage : {playerName}\nCollection active : {collectionName}";
     }
 }
