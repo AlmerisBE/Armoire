@@ -1,7 +1,7 @@
+namespace Armoire.Features.Penumbra.UI;
+
 using Armoire.Core.UI;
 using Dalamud.Bindings.ImGui;
-
-namespace Armoire.Features.Penumbra.UI;
 
 public class PenumbraStatusView : IUiComponent {
     private readonly PenumbraStatusPresenter presenter;
@@ -11,6 +11,8 @@ public class PenumbraStatusView : IUiComponent {
     }
 
     public void Draw() {
+        this.presenter.Tick();
+
         ImGui.TextDisabled("Penumbra Integration Status");
         ImGui.Spacing();
 

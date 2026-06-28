@@ -18,15 +18,17 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         }
 
         int modCount = this.penumbraClient.GetModsCount();
-
         var playerName = this.objectTable.LocalPlayer?.Name.TextValue;
 
         if (string.IsNullOrEmpty(playerName)) {
             return $"Penumbra est connecté. Mods installés : {modCount}\nPersonnage : Aucun (Non connecté)";
         }
 
-        var collectionName = this.penumbraClient.GetCollectionForCharacter(playerName) ?? "Collection par défaut";
+        var hierarchy = this.penumbraClient.GetActiveCollectionHierarchy();
+        string collectionText = hierarchy.Count > 0
+            ? string.Join(" -> ", hierarchy)
+            : "Aucune collection active";
 
-        return $"Penumbra est connecté. Mods installés : {modCount}\nPersonnage : {playerName}\nCollection active : {collectionName}";
+        return $"Penumbra est connecté. Mods installés : {modCount}\nPersonnage : {playerName}\nCollections actives : {collectionText}";
     }
 }

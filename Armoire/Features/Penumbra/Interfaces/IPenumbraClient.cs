@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Armoire.Features.Penumbra.Interfaces;
 
 public interface IPenumbraClient {
@@ -12,7 +14,7 @@ public interface IPenumbraClient {
     int GetModsCount();
 
     /// <summary>
-    /// Récupère le nom de la collection active pour un personnage donné.
+    /// Récupère les collections actives pour le personnage en ligne.
     /// </summary>
-    string? GetCollectionForCharacter(string characterName);
+    List<string> GetActiveCollectionHierarchy();
 }

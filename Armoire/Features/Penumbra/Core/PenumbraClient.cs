@@ -6,6 +6,8 @@ using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
 
 public class PenumbraClient : IPenumbraClient {
     private readonly IDalamudPluginInterface pluginInterface;
@@ -13,7 +15,7 @@ public class PenumbraClient : IPenumbraClient {
 
     private readonly ICallGateSubscriber<int> apiVersionSubscriber;
     private readonly ICallGateSubscriber<IDictionary<string, string>> getModListSubscriber;
-    private readonly ICallGateSubscriber<string, (Guid, string)> getCollectionForCharacterSubscriber;
+    private readonly ICallGateSubscriber<int, (Guid, string)> getCollectionForObjectSubscriber;
 
     public PenumbraClient(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog) {
         this.pluginInterface = pluginInterface;
@@ -22,8 +24,7 @@ public class PenumbraClient : IPenumbraClient {
         this.apiVersionSubscriber = pluginInterface.GetIpcSubscriber<int>("Penumbra.ApiVersion");
         this.getModListSubscriber = pluginInterface.GetIpcSubscriber<IDictionary<string, string>>("Penumbra.GetModList");
 
-        // Nouvelle route IPC pour lire la collection d'un personnage
-        this.getCollectionForCharacterSubscriber = pluginInterface.GetIpcSubscriber<string, (Guid, string)>("Penumbra.GetCollectionForCharacter");
+        this.getCollectionForObjectSubscriber = pluginInterface.GetIpcSubscriber<int, (Guid, string)>("Penumbra.GetCollectionForObject");
     }
 
     public bool IsEnabled() {
@@ -43,24 +44,62 @@ public class PenumbraClient : IPenumbraClient {
         try {
             var mods = this.getModListSubscriber.InvokeFunc();
             return mods?.Count ?? 0;
-        } catch (Exception ex) {
-            this.pluginLog.Error(ex, "Failed to retrieve the mod list from Penumbra.");
+        } catch (Exception) {
             return 0;
         }
     }
 
-    public string? GetCollectionForCharacter(string characterName) {
+    public List<string> GetActiveCollectionHierarchy() {
+        var hierarchy = new List<string>();
         if (!IsEnabled()) {
-            return null;
+            return hierarchy;
         }
 
         try {
-            // L'IPC renvoie un Tuple (Guid ID, string Nom), on extrait le Nom (Item2)
-            var result = this.getCollectionForCharacterSubscriber.InvokeFunc(characterName);
-            return result.Item2;
+            var (activeId, activeName) = this.getCollectionForObjectSubscriber.InvokeFunc(0);
+
+            var penumbraDir = Path.Combine(this.pluginInterface.ConfigDirectory.Parent!.FullName, "Penumbra");
+            var collectionsDir = Path.Combine(penumbraDir, "collections");
+
+            if (Directory.Exists(collectionsDir)) {
+                var visited = new HashSet<string>();
+                ResolveInheritance(activeId.ToString(), collectionsDir, visited, hierarchy);
+            } else {
+                hierarchy.Add(activeName);
+            }
         } catch (Exception ex) {
-            this.pluginLog.Warning(ex, "Failed to retrieve the collection for character from Penumbra.");
-            return null;
+            this.pluginLog.Warning(ex, "Failed to retrieve collection hierarchy from Penumbra.");
+        }
+
+        return hierarchy;
+    }
+
+    private void ResolveInheritance(string collectionId, string collectionsDir, HashSet<string> visited, List<string> hierarchy) {
+        if (!visited.Add(collectionId)) {
+            return;
+        }
+
+        var filePath = Path.Combine(collectionsDir, $"{collectionId}.json");
+        if (!File.Exists(filePath)) {
+            return;
+        }
+
+        try {
+            var jsonContent = File.ReadAllText(filePath);
+            using var doc = JsonDocument.Parse(jsonContent);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("Name", out var nameProp)) {
+                hierarchy.Add(nameProp.GetString() ?? "Unknown");
+            }
+
+            if (root.TryGetProperty("Inheritances", out var inheritancesProp) && inheritancesProp.ValueKind == JsonValueKind.Array) {
+                foreach (var element in inheritancesProp.EnumerateArray()) {
+                    ResolveInheritance(element.GetString()!, collectionsDir, visited, hierarchy);
+                }
+            }
+        } catch {
+            // Si un fichier est corrompu, on l'ignore silencieusement
         }
     }
 }

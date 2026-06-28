@@ -1,6 +1,8 @@
 .vs/
 obj/
 bin/
+TestResults/
+coveragereport/
 *.user
 /BuildCoverage.bat
 /coverlet.runsettings
