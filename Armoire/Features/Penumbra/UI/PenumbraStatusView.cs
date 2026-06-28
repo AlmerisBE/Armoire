@@ -1,6 +1,6 @@
 namespace Armoire.Features.Penumbra.UI;
 
-using Armoire.Core.UI; // Contains IUiComponent
+using Armoire.Core.UI;
 using Dalamud.Bindings.ImGui;
 using System;
 
@@ -25,15 +25,16 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.Separator();
         ImGui.Spacing();
 
-        // Restoring the display of active collections and their inheritance hierarchy
         ImGui.Text("Hiérarchie des collections actives :");
         if (status.ActiveCollections == null || status.ActiveCollections.Count == 0) {
             ImGui.TextColored(new System.Numerics.Vector4(0.5f, 0.5f, 0.5f, 1f), "  Aucune collection active détectée.");
         } else {
-            for (int i = 0; i < status.ActiveCollections.Count; i++) {
-                // Formatting to show hierarchy lineage (e.g., [Active] -> [Parent] -> [Base])
-                string prefix = i == 0 ? "  [Active] " : "  └── [Hérité] ";
+            // FIX: Read the list backwards. The last item is the active high-level collection.
+            int visualIndex = 0;
+            for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
+                string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
                 ImGui.Text($"{prefix}{status.ActiveCollections[i]}");
+                visualIndex++;
             }
         }
 

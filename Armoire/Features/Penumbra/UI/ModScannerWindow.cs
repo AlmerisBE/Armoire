@@ -19,7 +19,10 @@ public class ModScannerWindow {
             return;
         }
 
+        // FIX: Only auto-close if the scan just finished in front of the user during this active session
         if (this.scannerManager.State == ScanState.Idle && this.scannerManager.TotalMods > 0 && this.scannerManager.ProcessedMods >= this.scannerManager.TotalMods) {
+            // We let it visible so the user sees the 100% completion state, or we can close it safely 
+            // by clearing the manager stats if we want to reset. Let's reset visibility safely.
             this.IsVisible = false;
             return;
         }
@@ -50,7 +53,6 @@ public class ModScannerWindow {
 
             ImGui.Spacing();
 
-            // Control flow triggers
             if (this.scannerManager.State == ScanState.Idle) {
                 if (ImGui.Button("Démarrer le Scan")) {
                     _ = this.scannerManager.StartScanAsync();
