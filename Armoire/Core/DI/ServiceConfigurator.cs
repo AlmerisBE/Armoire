@@ -39,7 +39,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IPenumbraAnalyzer, PenumbraAnalyzer>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();
-        services.AddSingleton<PenumbraSyncManager>();
+        services.AddSingleton<IPenumbraSyncManager, PenumbraSyncManager>();
 
         // 4. Commands
         services.AddSingleton<IPluginCommand, MainCommand>();

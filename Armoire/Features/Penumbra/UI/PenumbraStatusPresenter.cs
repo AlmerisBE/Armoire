@@ -1,15 +1,15 @@
 namespace Armoire.Features.Penumbra.UI;
 
-using Armoire.Features.Penumbra.Core;
 using Armoire.Features.Penumbra.Core.Models;
+using Armoire.Features.Penumbra.Interfaces;
 using System;
 
 public class PenumbraStatusPresenter : IDisposable {
-    private readonly PenumbraSyncManager syncManager;
+    private readonly IPenumbraSyncManager syncManager;
 
     public PenumbraStatusResult CurrentStatus { get; private set; }
 
-    public PenumbraStatusPresenter(PenumbraSyncManager syncManager) {
+    public PenumbraStatusPresenter(IPenumbraSyncManager syncManager) {
         this.syncManager = syncManager;
         this.CurrentStatus = new PenumbraStatusResult();
 

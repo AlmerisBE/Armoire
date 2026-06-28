@@ -6,7 +6,7 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Threading.Tasks;
 
-public class PenumbraSyncManager : IDisposable {
+public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
     private readonly IFramework framework;
     private readonly IPenumbraAnalyzer analyzer;
     private readonly IPenumbraClient penumbraClient;

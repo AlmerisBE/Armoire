@@ -2,7 +2,7 @@ using Armoire.Core.Commands;
 using Armoire.Core.DI;
 using Armoire.Core.UI;
 using Armoire.Features.MainApp.UI;
-using Armoire.Features.Penumbra.Core;
+using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +17,7 @@ public sealed class Plugin : IDalamudPlugin {
     private readonly CommandRegistry commandRegistry;
     private readonly MainWindow mainWindow;
     private readonly IWindowManager windowManager;
-    private readonly PenumbraSyncManager syncManager;
+    private readonly IPenumbraSyncManager syncManager;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -32,7 +32,7 @@ public sealed class Plugin : IDalamudPlugin {
 
         mainWindow = serviceProvider.GetRequiredService<MainWindow>();
         windowManager = serviceProvider.GetRequiredService<IWindowManager>();
-        syncManager = serviceProvider.GetRequiredService<PenumbraSyncManager>();
+        syncManager = serviceProvider.GetRequiredService<IPenumbraSyncManager>();
 
         var uiComponents = serviceProvider.GetServices<IUiComponent>();
         foreach (var component in uiComponents) {

@@ -1,38 +1,43 @@
-namespace Armoire.Features.Penumbra.Tests;
+namespace Armoire.Tests.Features.Penumbra.UI;
 
 using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;
 using Armoire.Features.Penumbra.UI;
-using Dalamud.Plugin.Services;
 using NSubstitute;
+using System;
 using Xunit;
 
 public class PenumbraStatusPresenterTests {
     [Fact]
-    public void RefreshReport_ShouldUpdateCurrentStatusFromAnalyzer() {
+    public void Constructeur_AbonnementEvent_MetAJourCurrentStatus() {
         // Arrange
-        var mockAnalyzer = Substitute.For<IPenumbraAnalyzer>();
-        var mockClient = Substitute.For<IPenumbraClient>();
-        var mockRepository = Substitute.For<IPenumbraRepository>();
-        var mockObjectTable = Substitute.For<IObjectTable>();
+        var mockSyncManager = Substitute.For<IPenumbraSyncManager>();
+        var presenter = new PenumbraStatusPresenter(mockSyncManager);
 
-        // On prépare l'objet de réponse simulé
-        var expectedStatus = new PenumbraStatusResult {
+        var statutAttendu = new PenumbraStatusResult {
             IsEnabled = true,
             ModCount = 42,
-            PlayerName = "Almeris Test",
-            ActiveCollections = new List<string> { "Ysaline Sylv'anir", "Default" }
+            PlayerName = "Almeris Test"
         };
 
-        // On configure le mock pour renvoyer le modèle au lieu de la string
-        mockAnalyzer.GetStatusReport().Returns(expectedStatus);
+        // Act
+        // On simule le déclenchement de l'événement par le Manager d'arrière-plan
+        mockSyncManager.OnStatusUpdated += Raise.Event<Action<PenumbraStatusResult>>(statutAttendu);
 
-        var presenter = new PenumbraStatusPresenter(mockAnalyzer, mockClient, mockRepository, mockObjectTable);
+        // Assert
+        Assert.Same(statutAttendu, presenter.CurrentStatus);
+    }
+
+    [Fact]
+    public void RefreshReport_AppelleForceRefreshSurLeManager() {
+        // Arrange
+        var mockSyncManager = Substitute.For<IPenumbraSyncManager>();
+        var presenter = new PenumbraStatusPresenter(mockSyncManager);
 
         // Act
         presenter.RefreshReport();
 
         // Assert
-        Assert.Same(expectedStatus, presenter.CurrentStatus);
+        mockSyncManager.Received(1).ForceRefresh();
     }
 }
