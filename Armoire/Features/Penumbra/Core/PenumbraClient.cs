@@ -56,8 +56,10 @@ public class PenumbraClient : IPenumbraClient {
         }
 
         try {
+            // L'index 0 correspond au joueur local
             var (activeId, activeName) = this.getCollectionForObjectSubscriber.InvokeFunc(0);
 
+            // On remonte d'un dossier pour trouver les configurations de Penumbra
             var penumbraDir = Path.Combine(this.pluginInterface.ConfigDirectory.Parent!.FullName, "Penumbra");
             var collectionsDir = Path.Combine(penumbraDir, "collections");
 
@@ -65,8 +67,11 @@ public class PenumbraClient : IPenumbraClient {
                 var visited = new HashSet<string>();
                 ResolveInheritance(activeId.ToString(), collectionsDir, visited, hierarchy);
             } else {
-                hierarchy.Add(activeName);
+                hierarchy.Add(activeName); // Fallback de sécurité
             }
+        } catch (Dalamud.Plugin.Ipc.Exceptions.IpcNotReadyError) {
+            // L'IPC de Penumbra n'est pas encore prêt, on ignore silencieusement pour éviter le spam de log.
+            // Le Tick() de l'interface réessayera automatiquement 2 secondes plus tard !
         } catch (Exception ex) {
             this.pluginLog.Warning(ex, "Failed to retrieve collection hierarchy from Penumbra.");
         }

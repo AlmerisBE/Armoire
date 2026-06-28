@@ -31,7 +31,10 @@ public class PenumbraAnalyzerTests {
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(true);
         fauxClient.GetModsCount().Returns(42);
-        fauxClient.GetCollectionForCharacter("Almeris Test").Returns("Ma Collection Active");
+
+        // On simule le retour de la nouvelle hiérarchie sous forme de liste
+        var hierarchieSimulee = new List<string> { "Ysaline Sylv'anir", "My Character", "Default" };
+        fauxClient.GetActiveCollectionHierarchy().Returns(hierarchieSimulee);
 
         var fauxObjectTable = Substitute.For<IObjectTable>();
         var fauxJoueur = Substitute.For<IPlayerCharacter>();
@@ -45,7 +48,8 @@ public class PenumbraAnalyzerTests {
         var resultat = analyseur.GetStatusReport();
 
         // Assert
-        var resultatAttendu = "Penumbra est connecté. Mods installés : 42\nPersonnage : Almeris Test\nCollection active : Ma Collection Active";
+        // L'analyseur joint maintenant les collections avec " -> "
+        var resultatAttendu = "Penumbra est connecté. Mods installés : 42\nPersonnage : Almeris Test\nCollections actives : Ysaline Sylv'anir -> My Character -> Default";
         Assert.Equal(resultatAttendu, resultat);
     }
 }
