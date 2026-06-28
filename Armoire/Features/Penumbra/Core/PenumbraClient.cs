@@ -1,10 +1,10 @@
 namespace Armoire.Features.Penumbra.Core;
 
-using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using global::Penumbra.Api.IpcSubscribers;
 using System;
+using System.Collections.Generic;
 
 public class PenumbraClient : IPenumbraClient {
     private readonly IDalamudPluginInterface pluginInterface;
@@ -68,7 +68,6 @@ public class PenumbraClient : IPenumbraClient {
         }
     }
 
-    // NOUVEAU : Implémentation de la méthode
     public string GetModDirectory() {
         if (!IsEnabled()) {
             return string.Empty;
@@ -80,5 +79,26 @@ public class PenumbraClient : IPenumbraClient {
             this.pluginLog.Warning(ex, "[PenumbraClient] Impossible de récupérer le dossier des mods.");
             return string.Empty;
         }
+    }
+
+    public Dictionary<string, string> GetRawModsList() {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (!IsEnabled()) {
+            return result;
+        }
+
+        try {
+            var ipcList = this.getModListSubscriber.Invoke();
+            if (ipcList != null) {
+                foreach (var kvp in ipcList) {
+                    // Key = Directory Name, Value = Human Readable Name
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+        } catch (Exception ex) {
+            this.pluginLog.Error(ex, "[PenumbraClient] Failed to fetch raw mod list from IPC.");
+        }
+
+        return result;
     }
 }

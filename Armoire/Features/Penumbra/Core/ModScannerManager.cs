@@ -41,12 +41,18 @@ public class ModScannerManager : IModScannerManager, IDisposable {
         this.notificationManager = notificationManager;
     }
 
+    // Track the temporary list provided by the UI or the IPC configuration
+    private Dictionary<string, string> modsToScan = new();
+
     public void InitializeScanProgress(int ipcModCount) {
         if (this.State != ScanState.Idle) {
             return;
         }
 
-        this.totalMods = ipcModCount;
+        // Fetch the list right away to store targets and get accurate count
+        this.modsToScan = this.penumbraClient.GetRawModsList();
+
+        this.totalMods = this.modsToScan.Count;
         this.processedMods = 0;
         this.errorCount = 0;
     }
@@ -62,14 +68,18 @@ public class ModScannerManager : IModScannerManager, IDisposable {
             return;
         }
 
-        var directories = Directory.GetDirectories(modDirectory);
-        this.totalMods = directories.Length;
+        // If the user didn't open the window but hit scan via another trigger, ensure list is populated
+        if (this.modsToScan.Count == 0) {
+            this.modsToScan = this.penumbraClient.GetRawModsList();
+        }
+
+        this.totalMods = this.modsToScan.Count;
         this.processedMods = 0;
         this.errorCount = 0;
         this.State = ScanState.Scanning;
 
         this.cancellationTokenSource = new CancellationTokenSource();
-        this.pauseEvent.Set(); // Ensure the light is green
+        this.pauseEvent.Set();
 
         var newCache = new ConcurrentDictionary<string, ArmoireModCacheEntry>();
         var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -82,42 +92,42 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 };
 
-                Parallel.ForEach(directories, parallelOptions, dir => {
-                    // Block the thread here if pauseEvent.Reset() was called by the user
+                // Loop through our targeted IPC dictionary instead of directory scanning
+                Parallel.ForEach(this.modsToScan, parallelOptions, kvp => {
                     this.pauseEvent.Wait(token);
 
-                    var dirName = Path.GetFileName(dir);
-                    var entry = new ArmoireModCacheEntry { DirectoryName = dirName };
+                    var dirName = kvp.Key;   // Folder name from Penumbra
+                    var modName = kvp.Value; // Human name from Penumbra API (No meta.json read needed!)
+
+                    var entry = new ArmoireModCacheEntry {
+                        DirectoryName = dirName,
+                        ModName = string.IsNullOrEmpty(modName) ? dirName : modName
+                    };
+
+                    var fullDirPath = Path.Combine(modDirectory, dirName);
                     bool hasError = false;
 
-                    try {
-                        var metaPath = Path.Combine(dir, "meta.json");
-                        if (File.Exists(metaPath)) {
-                            var metaData = JsonSerializer.Deserialize<PenumbraMetaJson>(File.ReadAllText(metaPath), jsonOptions);
-                            if (metaData != null) {
-                                entry.ModName = metaData.Name;
-                            }
-                        }
+                    if (Directory.Exists(fullDirPath)) {
+                        try {
+                            // We only read default_mod.json to fetch game paths
+                            var defaultModPath = Path.Combine(fullDirPath, "default_mod.json");
+                            if (File.Exists(defaultModPath)) {
+                                var defaultData = JsonSerializer.Deserialize<PenumbraDefaultModJson>(File.ReadAllText(defaultModPath), jsonOptions);
+                                if (defaultData != null) {
+                                    foreach (var path in defaultData.Files.Keys) {
+                                        entry.ModifiedGamePaths.Add(path);
+                                    }
 
-                        if (string.IsNullOrEmpty(entry.ModName)) {
-                            entry.ModName = dirName;
-                        }
-
-                        var defaultModPath = Path.Combine(dir, "default_mod.json");
-                        if (File.Exists(defaultModPath)) {
-                            var defaultData = JsonSerializer.Deserialize<PenumbraDefaultModJson>(File.ReadAllText(defaultModPath), jsonOptions);
-                            if (defaultData != null) {
-                                foreach (var path in defaultData.Files.Keys) {
-                                    entry.ModifiedGamePaths.Add(path);
-                                }
-
-                                foreach (var path in defaultData.FileSwaps.Keys) {
-                                    entry.ModifiedGamePaths.Add(path);
+                                    foreach (var path in defaultData.FileSwaps.Keys) {
+                                        entry.ModifiedGamePaths.Add(path);
+                                    }
                                 }
                             }
+                        } catch {
+                            hasError = true;
                         }
-                    } catch {
-                        hasError = true;
+                    } else {
+                        hasError = true; // Directory registered in Penumbra but missing on disk
                     }
 
                     if (hasError) {
@@ -130,7 +140,6 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                 });
             }, token);
 
-            // If we reach this point, scan completed successfully
             this.modCache = new Dictionary<string, ArmoireModCacheEntry>(newCache);
             SendNotification("Scan Complete", $"Successfully scanned {this.ProcessedMods} mods. Errors: {this.ErrorCount}", NotificationType.Success);
 
@@ -142,6 +151,7 @@ public class ModScannerManager : IModScannerManager, IDisposable {
             SendNotification("Scan Failed", "An unexpected error occurred. Check logs.", NotificationType.Error);
         } finally {
             ResetState();
+            this.modsToScan.Clear(); // Clear working memory list
         }
     }
 

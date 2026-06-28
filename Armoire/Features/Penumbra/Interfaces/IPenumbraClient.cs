@@ -1,10 +1,9 @@
-namespace Armoire.Features.Penumbra.Interfaces;
-
 using System;
+using System.Collections.Generic; // Add this using
 
 public interface IPenumbraClient {
     bool IsEnabled();
-    int GetModsCount();
+    Dictionary<string, string> GetRawModsList();
     (Guid Id, string Name) GetActiveCollection();
     string GetModDirectory();
 }
