@@ -1,5 +1,6 @@
 namespace Armoire.Features.Penumbra.UI;
 
+using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Plugin.Services;
 using System;
@@ -13,13 +14,13 @@ public class PenumbraStatusPresenter {
     private int lastModCount = -1;
     private DateTime lastCheckTime = DateTime.MinValue;
 
-    public string CurrentReport { get; private set; }
+    public PenumbraStatusResult CurrentStatus { get; private set; }
 
     public PenumbraStatusPresenter(IPenumbraAnalyzer analyzer, IPenumbraClient penumbraClient, IObjectTable objectTable) {
         this.analyzer = analyzer;
         this.penumbraClient = penumbraClient;
         this.objectTable = objectTable;
-        this.CurrentReport = "Chargement des statistiques...";
+        this.CurrentStatus = new PenumbraStatusResult();
     }
 
     public void Tick() {
@@ -40,6 +41,6 @@ public class PenumbraStatusPresenter {
     }
 
     public void RefreshReport() {
-        this.CurrentReport = this.analyzer.GetStatusReport();
+        this.CurrentStatus = this.analyzer.GetStatusReport();
     }
 }

@@ -2,6 +2,7 @@ namespace Armoire.Features.Penumbra.UI;
 
 using Armoire.Core.UI;
 using Dalamud.Bindings.ImGui;
+using System.Linq;
 
 public class PenumbraStatusView : IUiComponent {
     private readonly PenumbraStatusPresenter presenter;
@@ -16,11 +17,30 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.TextDisabled("Penumbra Integration Status");
         ImGui.Spacing();
 
-        ImGui.TextWrapped(presenter.CurrentReport);
+        var status = this.presenter.CurrentStatus;
+
+        if (!status.IsEnabled) {
+            ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.3f, 0.3f, 1.0f), "Penumbra est hors ligne ou non installé.");
+        } else {
+            ImGui.Text($"Mods installés : {status.ModCount}");
+
+            if (!status.IsPlayerConnected) {
+                ImGui.Text("Personnage : Aucun (Non connecté)");
+            } else {
+                ImGui.Text($"Personnage : {status.PlayerName}");
+
+                string collectionText = status.ActiveCollections.Any()
+                    ? string.Join(" -> ", status.ActiveCollections)
+                    : "Aucune collection active";
+
+                ImGui.Text($"Collections actives : {collectionText}");
+            }
+        }
+
         ImGui.Spacing();
 
         if (ImGui.Button("Refresh Status")) {
-            presenter.RefreshReport();
+            this.presenter.RefreshReport();
         }
     }
 }

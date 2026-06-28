@@ -10,7 +10,7 @@ using Xunit;
 
 public class PenumbraAnalyzerTests {
     [Fact]
-    public void GetStatusReport_QuandPenumbraEstDesactive_RetourneMessageHorsLigne() {
+    public void GetStatusReport_QuandPenumbraEstDesactive_RetourneResultatInactif() {
         // Arrange
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(false);
@@ -22,18 +22,17 @@ public class PenumbraAnalyzerTests {
         var resultat = analyseur.GetStatusReport();
 
         // Assert
-        Assert.Equal("Penumbra est hors ligne ou non installé.", resultat);
+        Assert.False(resultat.IsEnabled);
     }
 
     [Fact]
-    public void GetStatusReport_QuandPersonnageEstConnecte_RetourneStatistiquesCompletes() {
+    public void GetStatusReport_QuandPersonnageEstConnecte_RetourneDonneesStructurees() {
         // Arrange
         var fauxClient = Substitute.For<IPenumbraClient>();
         fauxClient.IsEnabled().Returns(true);
         fauxClient.GetModsCount().Returns(42);
 
-        // On simule le retour de la nouvelle hiérarchie sous forme de liste
-        var hierarchieSimulee = new List<string> { "Ysaline Sylv'anir", "My Character", "Default" };
+        var hierarchieSimulee = new List<string> { "Ysaline Sylv'anir", "Default" };
         fauxClient.GetActiveCollectionHierarchy().Returns(hierarchieSimulee);
 
         var fauxObjectTable = Substitute.For<IObjectTable>();
@@ -48,8 +47,10 @@ public class PenumbraAnalyzerTests {
         var resultat = analyseur.GetStatusReport();
 
         // Assert
-        // L'analyseur joint maintenant les collections avec " -> "
-        var resultatAttendu = "Penumbra est connecté. Mods installés : 42\nPersonnage : Almeris Test\nCollections actives : Ysaline Sylv'anir -> My Character -> Default";
-        Assert.Equal(resultatAttendu, resultat);
+        Assert.True(resultat.IsEnabled);
+        Assert.Equal(42, resultat.ModCount);
+        Assert.Equal("Almeris Test", resultat.PlayerName);
+        Assert.True(resultat.IsPlayerConnected);
+        Assert.Equal(hierarchieSimulee, resultat.ActiveCollections);
     }
 }
