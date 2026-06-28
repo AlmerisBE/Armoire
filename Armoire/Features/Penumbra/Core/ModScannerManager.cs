@@ -41,6 +41,16 @@ public class ModScannerManager : IModScannerManager, IDisposable {
         this.notificationManager = notificationManager;
     }
 
+    public void InitializeScanProgress(int ipcModCount) {
+        if (this.State != ScanState.Idle) {
+            return;
+        }
+
+        this.totalMods = ipcModCount;
+        this.processedMods = 0;
+        this.errorCount = 0;
+    }
+
     public async Task StartScanAsync() {
         if (this.State != ScanState.Idle) {
             return;

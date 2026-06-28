@@ -29,7 +29,6 @@ public class PenumbraStatusView : IUiComponent {
         if (status.ActiveCollections == null || status.ActiveCollections.Count == 0) {
             ImGui.TextColored(new System.Numerics.Vector4(0.5f, 0.5f, 0.5f, 1f), "  Aucune collection active détectée.");
         } else {
-            // FIX: Read the list backwards. The last item is the active high-level collection.
             int visualIndex = 0;
             for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
                 string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
@@ -49,7 +48,7 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.SameLine();
 
         if (ImGui.Button("Gérer le cache de conflits")) {
-            this.modScannerWindow.IsVisible = true;
+            this.modScannerWindow.Open(status.ModCount);
         }
 
         this.modScannerWindow.Draw();

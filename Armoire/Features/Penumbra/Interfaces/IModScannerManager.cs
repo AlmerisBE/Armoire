@@ -11,7 +11,7 @@ public interface IModScannerManager {
     int ErrorCount { get; }
 
     IReadOnlyDictionary<string, ArmoireModCacheEntry> ModCache { get; }
-
+    void InitializeScanProgress(int ipcModCount);
     Task StartScanAsync();
     void PauseScan();
     void ResumeScan();

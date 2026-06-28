@@ -14,6 +14,11 @@ public class ModScannerWindow {
         this.scannerManager = scannerManager;
     }
 
+    public void Open(int ipcModCount) {
+        this.scannerManager.InitializeScanProgress(ipcModCount);
+        this.IsVisible = true;
+    }
+
     public void Draw() {
         if (!this.IsVisible) {
             return;
