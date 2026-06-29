@@ -3,10 +3,12 @@ using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.DiagnosticsUI;
+using Armoire.Features.GameData;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.PenumbraIpc;
+using Armoire.Features.VanillaSearch;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +23,9 @@ public static class ServiceConfigurator {
         IObjectTable objectTable,
         IFramework framework,
         INotificationManager notificationManager,
-        IClientState clientState) {
+        IClientState clientState,
+        IDataManager dataManager,
+        ITextureProvider textureProvider) {
         var services = new ServiceCollection();
 
         // 1. Dalamud native services
@@ -32,14 +36,18 @@ public static class ServiceConfigurator {
         services.AddSingleton(framework);
         services.AddSingleton(notificationManager);
         services.AddSingleton(clientState);
+        services.AddSingleton(dataManager);
+        services.AddSingleton(textureProvider);
 
         // 2. Core services
         services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton<IGameDataService, GameDataService>();
         services.AddSingleton<ConfigWindow>();
         services.AddSingleton<MainWindow>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<CommandRegistry>();
+        services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
 
         // 3. Features dependencies (Penumbra)
         services.AddSingleton<IPenumbraClient, PenumbraClient>();
@@ -53,6 +61,8 @@ public static class ServiceConfigurator {
         services.AddSingleton<ConflictListWindow>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();
+        services.AddSingleton<Armoire.Features.ModDetails.IModDetailsResolver, Armoire.Features.ModDetails.ModDetailsResolver>();
+        services.AddSingleton<Armoire.Features.ModDetails.UI.ModDetailsWindow>();
 
         // 4. Commands
         services.AddSingleton<IPluginCommand, MainCommand>();

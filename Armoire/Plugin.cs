@@ -26,10 +26,22 @@ public sealed class Plugin : IDalamudPlugin {
         IObjectTable objectTable,
         IFramework framework,
         INotificationManager notificationManager,
-        IClientState clientState) {
+        IClientState clientState,
+        IDataManager dataManager,
+        ITextureProvider textureProvider) {
 
         this.pluginInterface = pluginInterface;
-        serviceProvider = ServiceConfigurator.ConfigureServices(pluginInterface, pluginLog, commandManager, objectTable, framework, notificationManager, clientState);
+        serviceProvider = ServiceConfigurator.ConfigureServices(
+            pluginInterface,
+            pluginLog,
+            commandManager,
+            objectTable,
+            framework,
+            notificationManager,
+            clientState,
+            dataManager,
+            textureProvider
+        );
 
         mainWindow = serviceProvider.GetRequiredService<MainWindow>();
         windowManager = serviceProvider.GetRequiredService<IWindowManager>();

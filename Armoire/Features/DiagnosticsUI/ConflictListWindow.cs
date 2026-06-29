@@ -14,9 +14,12 @@ public class ConflictListWindow {
 
     private List<PenumbraMod> currentConflicts = new();
     private string searchQuery = string.Empty;
+    private readonly Armoire.Features.ModDetails.UI.ModDetailsWindow modDetailsWindow;
 
-    public ConflictListWindow(ILocalizationService localizationService) {
+    // Mets à jour le constructeur
+    public ConflictListWindow(ILocalizationService localizationService, Armoire.Features.ModDetails.UI.ModDetailsWindow detailsWindow) {
         this.loc = localizationService;
+        this.modDetailsWindow = detailsWindow;
     }
 
     public void Open() {
@@ -66,7 +69,9 @@ public class ConflictListWindow {
 
                     // Column 1: The Loser Mod
                     ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(mod.Name);
+                    if (ImGui.Selectable($"{mod.Name}##{mod.Id}", false, ImGuiSelectableFlags.SpanAllColumns)) {
+                        this.modDetailsWindow.Open(mod.Id);
+                    }
 
                     // Column 2: Equipment Slots
                     ImGui.TableNextColumn();

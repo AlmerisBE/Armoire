@@ -11,7 +11,9 @@ public class PenumbraStatusResult {
     public int ConflictModCount { get; set; }
 
     public string PlayerName { get; set; } = string.Empty;
-    public List<string> ActiveCollections { get; set; } = new();
+    public List<string> ActiveCollections { get; set; } = [];
 
-    public List<PenumbraMod> ConflictingMods { get; set; } = new();
+    public List<PenumbraMod> ConflictingMods { get; set; } = [];
+
+    public EffectiveCollectionState? GlobalState { get; set; }
 }

@@ -3,6 +3,7 @@ namespace Armoire.Features.DiagnosticsUI;
 using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Armoire.Features.ConflictEngine.Models;
+using Armoire.Features.ModDetails.UI;
 using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
@@ -11,17 +12,20 @@ public class PenumbraStatusView : IUiComponent {
     private readonly PenumbraStatusPresenter presenter;
     private readonly ModScannerWindow modScannerWindow;
     private readonly ConflictListWindow conflictListWindow;
+    private readonly ModDetailsWindow modDetailsWindow;
     private readonly ILocalizationService loc;
 
     public PenumbraStatusView(
         PenumbraStatusPresenter presenter,
         ModScannerWindow modScannerWindow,
         ConflictListWindow conflictListWindow,
+        ModDetailsWindow modDetailsWindow,
         ILocalizationService localizationService) {
 
         this.presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
         this.modScannerWindow = modScannerWindow ?? throw new ArgumentNullException(nameof(modScannerWindow));
         this.conflictListWindow = conflictListWindow ?? throw new ArgumentNullException(nameof(conflictListWindow));
+        this.modDetailsWindow = modDetailsWindow ?? throw new ArgumentNullException(nameof(modDetailsWindow));
         this.loc = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
     }
 
@@ -42,6 +46,7 @@ public class PenumbraStatusView : IUiComponent {
 
         this.modScannerWindow.Draw();
         this.conflictListWindow.Draw(status.ConflictingMods);
+        this.modDetailsWindow.Draw(status.GlobalState);
     }
 
     private void DrawBaselineMetadata(PenumbraStatusResult status) {
