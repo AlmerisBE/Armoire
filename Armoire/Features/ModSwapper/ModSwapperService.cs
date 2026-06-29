@@ -24,48 +24,57 @@ public class ModSwapperService : IModSwapperService {
     }
 
     public bool PerformSwap(string modId, string slotKey, string targetModelId) {
-        // modId represents the physical directory path
-        string configPath = Path.Combine(modId, "default_mod.json");
-        string backupPath = Path.Combine(modId, "default_mod.armoire_bak");
+        string rootDir = this.penumbraClient.GetModDirectory();
+        if (string.IsNullOrEmpty(rootDir)) {
+            this.pluginLog.Error("[ModSwapper] Cannot retrieve Penumbra root mod directory.");
+            return false;
+        }
 
-        if (!File.Exists(configPath)) {
-            this.pluginLog.Error($"[ModSwapper] Configuration file not found at {configPath}");
+        string fullModPath = Path.Combine(rootDir, modId);
+        if (!Directory.Exists(fullModPath)) {
+            this.pluginLog.Error($"[ModSwapper] Mod directory not found at {fullModPath}");
             return false;
         }
 
         try {
             this.pluginLog.Info($"[ModSwapper] Starting swap for {modId} ({slotKey} -> {targetModelId})");
 
-            // 1. Create a pristine backup if it's the very first time we modify this mod
-            if (!File.Exists(backupPath)) {
-                File.Copy(configPath, backupPath);
-                this.pluginLog.Info("[ModSwapper] Created safety backup: default_mod.armoire_bak");
+            // Get all json files (default_mod.json AND group_*.json)
+            var jsonFiles = Directory.GetFiles(fullModPath, "*.json", SearchOption.TopDirectoryOnly);
+            bool anyFilesChanged = false;
+
+            foreach (var configFile in jsonFiles) {
+                string fileName = Path.GetFileName(configFile);
+                // Ignore metadata
+                if (fileName.Equals("meta.json", StringComparison.OrdinalIgnoreCase)) {
+                    continue;
+                }
+
+                string backupPath = configFile + ".armoire_bak";
+                string jsonContent = File.ReadAllText(configFile);
+                var root = JToken.Parse(jsonContent);
+
+                // Recursively search and replace paths in this file
+                if (RecurseAndReplace(root, slotKey, targetModelId)) {
+                    // Create backup only if changes were made and no backup exists yet
+                    if (!File.Exists(backupPath)) {
+                        File.Copy(configFile, backupPath);
+                        this.pluginLog.Info($"[ModSwapper] Created safety backup: {fileName}.armoire_bak");
+                    }
+
+                    File.WriteAllText(configFile, root.ToString());
+                    anyFilesChanged = true;
+                }
             }
 
-            // 2. Load and Parse JSON
-            string jsonContent = File.ReadAllText(configPath);
-            var root = JObject.Parse(jsonContent);
-            bool filesChanged = false;
-
-            // 3. Process the "Files" and "FileSwaps" root objects
-            if (root["Files"] is JObject files) {
-                filesChanged |= ProcessJObjectPaths(files, slotKey, targetModelId);
-            }
-            if (root["FileSwaps"] is JObject fileSwaps) {
-                filesChanged |= ProcessJObjectPaths(fileSwaps, slotKey, targetModelId);
-            }
-
-            // 4. Save to disk if any redirection was applied
-            if (filesChanged) {
-                File.WriteAllText(configPath, root.ToString());
-                this.pluginLog.Info("[ModSwapper] Successfully saved modified JSON.");
-
+            if (anyFilesChanged) {
+                this.pluginLog.Info("[ModSwapper] Successfully saved modified JSON files.");
                 this.penumbraClient.ReloadMod(modId);
                 this.penumbraClient.RedrawAll();
                 return true;
             }
 
-            this.pluginLog.Info("[ModSwapper] No matching paths found to swap for this specific slot.");
+            this.pluginLog.Info("[ModSwapper] No matching paths found to swap for this specific slot in any JSON file.");
             return false;
 
         } catch (Exception ex) {
@@ -75,23 +84,31 @@ public class ModSwapperService : IModSwapperService {
     }
 
     public bool ResetMod(string modId) {
-        string configPath = Path.Combine(modId, "default_mod.json");
-        string backupPath = Path.Combine(modId, "default_mod.armoire_bak");
+        string rootDir = this.penumbraClient.GetModDirectory();
+        if (string.IsNullOrEmpty(rootDir)) {
+            return false;
+        }
 
-        if (!File.Exists(backupPath)) {
-            this.pluginLog.Warning($"[ModSwapper] No backup found to restore for {modId}. Mod is already in its original state.");
+        string fullModPath = Path.Combine(rootDir, modId);
+        var backupFiles = Directory.GetFiles(fullModPath, "*.armoire_bak", SearchOption.TopDirectoryOnly);
+
+        if (backupFiles.Length == 0) {
+            this.pluginLog.Warning($"[ModSwapper] No backups found to restore for {modId}. Mod is already in its original state.");
             return false;
         }
 
         try {
-            // Restore the backup over the modified file, then delete the backup so we know it's clean
-            File.Copy(backupPath, configPath, overwrite: true);
-            File.Delete(backupPath);
+            // Restore all found backups over their modified original files
+            foreach (var backupPath in backupFiles) {
+                string originalFilePath = backupPath.Replace(".armoire_bak", "");
+                File.Copy(backupPath, originalFilePath, overwrite: true);
+                File.Delete(backupPath);
+            }
 
             this.penumbraClient.ReloadMod(modId);
             this.penumbraClient.RedrawAll();
 
-            this.pluginLog.Info($"[ModSwapper] Successfully restored backup for {modId}");
+            this.pluginLog.Info($"[ModSwapper] Successfully restored {backupFiles.Length} backups for {modId}");
             return true;
         } catch (Exception ex) {
             this.pluginLog.Error(ex, $"[ModSwapper] Failed to restore backup for mod {modId}");
@@ -100,8 +117,38 @@ public class ModSwapperService : IModSwapperService {
     }
 
     /// <summary>
-    /// Scans a JSON object, finds keys matching the target slot, and replaces their model IDs with the new one.
+    /// Recursively traverses a JSON token to find "Files" and "FileSwaps" objects and applies replacements.
     /// </summary>
+    private bool RecurseAndReplace(JToken token, string slotKey, string targetModelId) {
+        bool changed = false;
+
+        if (token is JObject obj) {
+            // 1. Process known target dictionaries if they exist
+            if (obj["Files"] is JObject files) {
+                changed |= ProcessJObjectPaths(files, slotKey, targetModelId);
+            }
+            if (obj["FileSwaps"] is JObject fileSwaps) {
+                changed |= ProcessJObjectPaths(fileSwaps, slotKey, targetModelId);
+            }
+
+            // 2. Continue traversing down the tree (e.g., inside an "Options" array)
+            foreach (var prop in obj.Properties()) {
+                // Skip traversing into the dictionaries we literally just processed
+                if (prop.Name.Equals("Files", StringComparison.OrdinalIgnoreCase) ||
+                    prop.Name.Equals("FileSwaps", StringComparison.OrdinalIgnoreCase)) {
+                    continue;
+                }
+                changed |= RecurseAndReplace(prop.Value, slotKey, targetModelId);
+            }
+        } else if (token is JArray arr) {
+            foreach (var item in arr) {
+                changed |= RecurseAndReplace(item, slotKey, targetModelId);
+            }
+        }
+
+        return changed;
+    }
+
     private bool ProcessJObjectPaths(JObject dict, string slotKey, string targetModelId) {
         var propertiesToReplace = new List<JProperty>();
         bool hasChanged = false;
@@ -134,18 +181,13 @@ public class ModSwapperService : IModSwapperService {
         return hasChanged;
     }
 
-    /// <summary>
-    /// Checks if a raw FFXIV game path corresponds to the currently targeted equipment slot.
-    /// </summary>
     private bool IsPathMatchingSlot(string path, string slotKey) {
         string lowerPath = path.ToLowerInvariant();
 
-        // Standard FFXIV equipment suffixes
         if (slotKey != "wpn" && slotKey != "sub" && slotKey != "custom" && slotKey != "unknown") {
             return lowerPath.Contains($"_{slotKey}.") || lowerPath.Contains($"_{slotKey}_");
         }
 
-        // Weapons use a different structure entirely (chara/weapon/...)
         if (slotKey == "wpn" || slotKey == "sub") {
             return lowerPath.Contains("chara/weapon/");
         }
