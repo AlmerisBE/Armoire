@@ -18,7 +18,10 @@ public class PenumbraStatusView : IUiComponent {
 
         ImGui.Text($"Statut de l'intégration : {(status.IsEnabled ? "Actif" : "Inactif")}");
         ImGui.Text($"Personnage connecté : {(string.IsNullOrEmpty(status.PlayerName) ? "Aucun" : status.PlayerName)}");
+
+        // Display IPC totals and collection-specific active mod counts
         ImGui.Text($"Nombre de mods détectés par l'IPC : {status.ModCount}");
+        ImGui.Text($"Mods activés dans la collection : {status.CollectionEnabledMods} / {status.CollectionTotalMods}");
 
         ImGui.Text($"Mods actifs en conflit (surchargés) : {status.ConflictModCount}");
 
@@ -31,6 +34,7 @@ public class PenumbraStatusView : IUiComponent {
             ImGui.TextColored(new System.Numerics.Vector4(0.5f, 0.5f, 0.5f, 1f), "  Aucune collection active détectée.");
         } else {
             int visualIndex = 0;
+            // Iterate backwards to display the active root collection first
             for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
                 string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
                 ImGui.Text($"{prefix}{status.ActiveCollections[i]}");
