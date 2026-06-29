@@ -23,6 +23,14 @@ public class ModScannerWindow {
             return;
         }
 
+        if (this.scannerManager.State == ScanState.Idle &&
+            this.scannerManager.TotalMods > 0 &&
+            this.scannerManager.ProcessedMods >= this.scannerManager.TotalMods) {
+
+            this.IsVisible = false;
+            return;
+        }
+
         bool windowOpen = this.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(450, 220), ImGuiCond.FirstUseEver);
 
@@ -50,13 +58,8 @@ public class ModScannerWindow {
             ImGui.Spacing();
 
             if (this.scannerManager.State == ScanState.Idle) {
-                // If total == processed and total > 0, the scan is done.
-                if (total > 0 && processed >= total) {
-                    ImGui.TextColored(new Vector4(0, 1, 0, 1), "Le scan est terminé avec succès !");
-                } else {
-                    if (ImGui.Button("Démarrer le Scan")) {
-                        _ = this.scannerManager.StartScanAsync();
-                    }
+                if (ImGui.Button("Démarrer le Scan")) {
+                    _ = this.scannerManager.StartScanAsync();
                 }
             } else if (this.scannerManager.State == ScanState.Scanning) {
                 if (ImGui.Button("Mettre en Pause")) {
