@@ -1,10 +1,12 @@
 using Armoire.Core.Commands;
 using Armoire.Core.UI;
+using Armoire.Features.LocalScanner;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.Penumbra.Core;
 using Armoire.Features.Penumbra.Interfaces;
 using Armoire.Features.Penumbra.UI;
+using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;

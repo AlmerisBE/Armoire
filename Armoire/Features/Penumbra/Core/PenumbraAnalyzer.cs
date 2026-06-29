@@ -2,6 +2,7 @@ namespace Armoire.Features.Penumbra.Core;
 
 using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin.Services;
 using System;
 using System.Linq;

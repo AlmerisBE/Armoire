@@ -1,4 +1,4 @@
-﻿namespace Armoire.Features.Penumbra.Core.Domain;
+﻿namespace Armoire.Features.LocalScanner.Models;
 
 /// <summary>
 /// Maps the structure of the 'meta.json' file located at the root of a Penumbra mod.

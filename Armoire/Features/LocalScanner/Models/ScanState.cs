@@ -1,4 +1,4 @@
-﻿namespace Armoire.Features.Penumbra.Core.Models;
+﻿namespace Armoire.Features.LocalScanner.Models;
 
 /// <summary>
 /// Represents the current state of the mod scanning process.

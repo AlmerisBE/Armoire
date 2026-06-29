@@ -1,5 +1,6 @@
 ﻿namespace Armoire.Features.Penumbra.Core;
 
+using Armoire.Features.LocalScanner;
 using Armoire.Features.Penumbra.Core.Domain;
 using Armoire.Features.Penumbra.Core.Models;
 using Armoire.Features.Penumbra.Interfaces;

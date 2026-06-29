@@ -1,4 +1,4 @@
-namespace Armoire.Features.Penumbra.Core;
+﻿namespace Armoire.Features.PenumbraIpc;
 
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
@@ -29,9 +29,9 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         this.apiVersionSubscriber = new ApiVersion(pluginInterface);
         this.getModListSubscriber = new GetModList(pluginInterface);
         this.getCollectionForObjectSubscriber = new GetCollectionForObject(pluginInterface);
-
         this.getModDirectorySubscriber = new GetModDirectory(pluginInterface);
 
+        // Bind Penumbra lifecycle events safely
         this.initializedSubscriber = pluginInterface.GetIpcSubscriber<Action>("Penumbra.Initialized");
         this.initializedSubscriber.Subscribe(HandleInitialized);
 
@@ -88,7 +88,7 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         try {
             return this.getModDirectorySubscriber.Invoke();
         } catch (Exception ex) {
-            this.pluginLog.Warning(ex, "[PenumbraClient] Impossible de récupérer le dossier des mods.");
+            this.pluginLog.Warning(ex, "[PenumbraClient] Failed to retrieve mod directory.");
             return string.Empty;
         }
     }

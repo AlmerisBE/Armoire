@@ -1,6 +1,6 @@
-﻿namespace Armoire.Features.Penumbra.Interfaces;
+﻿namespace Armoire.Features.LocalScanner;
 
-using Armoire.Features.Penumbra.Core.Models;
+using Armoire.Features.LocalScanner.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

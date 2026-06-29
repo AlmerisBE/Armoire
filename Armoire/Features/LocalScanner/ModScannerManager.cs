@@ -1,8 +1,7 @@
-﻿namespace Armoire.Features.Penumbra.Core;
+﻿namespace Armoire.Features.LocalScanner;
 
-using Armoire.Features.Penumbra.Core.Domain;
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.LocalScanner.Models;
+using Armoire.Features.PenumbraIpc;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Plugin.Services;
 using System;

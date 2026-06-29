@@ -1,4 +1,4 @@
-﻿namespace Armoire.Features.Penumbra.Core.Domain;
+﻿namespace Armoire.Features.LocalScanner.Models;
 
 using System.Collections.Generic;
 
