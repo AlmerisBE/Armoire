@@ -86,4 +86,15 @@ public class ModScannerWindow {
         }
         ImGui.End();
     }
+
+    public float GetScanProgress() {
+        int total = this.scannerManager.TotalMods;
+        int processed = this.scannerManager.ProcessedMods;
+
+        return total > 0 ? (float)processed / total : 0f;
+    }
+
+    public bool IsScanning() {
+        return this.scannerManager.State == ScanState.Scanning;
+    }
 }

@@ -37,8 +37,20 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
         this.scannerManager = scannerManager;
 
         this.framework.Update += OnFrameworkUpdate;
-
         this.scannerManager.OnCacheUpdated += ForceRefresh;
+
+        this.penumbraClient.OnInitialized += TriggerBackgroundScan;
+
+        if (this.penumbraClient.IsEnabled()) {
+            TriggerBackgroundScan();
+        }
+    }
+
+    private void TriggerBackgroundScan() {
+        if (this.scannerManager.State == ScanState.Idle) {
+            this.scannerManager.InitializeScanProgress(this.penumbraClient.GetModsCount());
+            _ = this.scannerManager.StartScanAsync();
+        }
     }
 
     private void OnFrameworkUpdate(IFramework fw) {
@@ -82,5 +94,6 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
     public void Dispose() {
         this.framework.Update -= OnFrameworkUpdate;
         this.scannerManager.OnCacheUpdated -= ForceRefresh;
+        this.penumbraClient.OnInitialized -= TriggerBackgroundScan;
     }
 }

@@ -24,6 +24,10 @@ public class PenumbraStatusView : IUiComponent {
     public void Draw() {
         var status = this.presenter.CurrentStatus;
 
+        if (this.modScannerWindow.IsScanning()) {
+            DrawBackgroundScanIndicator();
+        }
+
         DrawBaselineMetadata(status);
         DrawSeparator();
 
@@ -33,7 +37,7 @@ public class PenumbraStatusView : IUiComponent {
         DrawCollectionHierarchy(status);
         DrawSeparator();
 
-        DrawActionButtons(status);
+        DrawActionButtons(status, this.modScannerWindow.IsScanning());
 
         // Execute drawing routines for injected sub-windows
         this.modScannerWindow.Draw();
@@ -98,7 +102,12 @@ public class PenumbraStatusView : IUiComponent {
     }
 
     // Renders triggers for state updates and modal windows
-    private void DrawActionButtons(PenumbraStatusResult status) {
+    private void DrawActionButtons(PenumbraStatusResult status, bool isScanning) {
+        // Disable interactions while the background scan is locking the cache
+        if (isScanning) {
+            ImGui.BeginDisabled();
+        }
+
         if (ImGui.Button("Rafraîchir le rapport global")) {
             this.presenter.RefreshReport();
         }
@@ -115,6 +124,20 @@ public class PenumbraStatusView : IUiComponent {
                 this.conflictListWindow.Open();
             }
         }
+
+        if (isScanning) {
+            ImGui.EndDisabled();
+        }
+    }
+
+    // Renders the active background scan progress natively on the main view
+    private void DrawBackgroundScanIndicator() {
+        ImGui.TextColored(new Vector4(1.0f, 0.8f, 0.2f, 1.0f), "Mise en cache initiale des mods en cours...");
+
+        float progress = this.modScannerWindow.GetScanProgress();
+        ImGui.ProgressBar(progress, new Vector2(-1, 14), $"{(progress * 100):0.0}%");
+
+        DrawSeparator();
     }
 
     // Utility for consistent visual separation

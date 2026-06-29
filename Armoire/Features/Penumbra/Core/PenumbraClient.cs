@@ -1,21 +1,26 @@
 namespace Armoire.Features.Penumbra.Core;
 
 using Dalamud.Plugin;
+using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using global::Penumbra.Api.IpcSubscribers;
 using System;
 using System.Collections.Generic;
 
-public class PenumbraClient : IPenumbraClient {
+public class PenumbraClient : IPenumbraClient, IDisposable {
     private readonly IDalamudPluginInterface pluginInterface;
     private readonly IPluginLog pluginLog;
 
     private readonly ApiVersion apiVersionSubscriber;
     private readonly GetModList getModListSubscriber;
     private readonly GetCollectionForObject getCollectionForObjectSubscriber;
-
-    // NOUVEAU : Le souscripteur officiel pour le dossier des mods
     private readonly GetModDirectory getModDirectorySubscriber;
+
+    private readonly ICallGateSubscriber<Action> initializedSubscriber;
+    private readonly ICallGateSubscriber<Action> disposedSubscriber;
+
+    public event Action? OnInitialized;
+    public event Action? OnDisposed;
 
     public PenumbraClient(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog) {
         this.pluginInterface = pluginInterface;
@@ -25,8 +30,23 @@ public class PenumbraClient : IPenumbraClient {
         this.getModListSubscriber = new GetModList(pluginInterface);
         this.getCollectionForObjectSubscriber = new GetCollectionForObject(pluginInterface);
 
-        // Initialisation de la route IPC
         this.getModDirectorySubscriber = new GetModDirectory(pluginInterface);
+
+        this.initializedSubscriber = pluginInterface.GetIpcSubscriber<Action>("Penumbra.Initialized");
+        this.initializedSubscriber.Subscribe(HandleInitialized);
+
+        this.disposedSubscriber = pluginInterface.GetIpcSubscriber<Action>("Penumbra.Disposed");
+        this.disposedSubscriber.Subscribe(HandleDisposed);
+    }
+
+    private void HandleInitialized() {
+        this.pluginLog.Info("[PenumbraClient] Penumbra IPC is now available.");
+        this.OnInitialized?.Invoke();
+    }
+
+    private void HandleDisposed() {
+        this.pluginLog.Info("[PenumbraClient] Penumbra IPC was disposed.");
+        this.OnDisposed?.Invoke();
     }
 
     public bool IsEnabled() {
@@ -92,5 +112,11 @@ public class PenumbraClient : IPenumbraClient {
         }
 
         return result;
+    }
+
+    public void Dispose() {
+        // Clean up IPC subscriptions to prevent memory leaks
+        this.initializedSubscriber.Unsubscribe(HandleInitialized);
+        this.disposedSubscriber.Unsubscribe(HandleDisposed);
     }
 }
