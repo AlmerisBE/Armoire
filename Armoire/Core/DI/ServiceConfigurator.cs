@@ -7,8 +7,11 @@ using Armoire.Features.GameData;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
+using Armoire.Features.ModDetails;
+using Armoire.Features.ModDetails.UI;
 using Armoire.Features.PenumbraIpc;
 using Armoire.Features.VanillaSearch;
+using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,8 +64,9 @@ public static class ServiceConfigurator {
         services.AddSingleton<ConflictListWindow>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();
-        services.AddSingleton<Armoire.Features.ModDetails.IModDetailsResolver, Armoire.Features.ModDetails.ModDetailsResolver>();
-        services.AddSingleton<Armoire.Features.ModDetails.UI.ModDetailsWindow>();
+        services.AddSingleton<IModDetailsResolver, ModDetailsResolver>();
+        services.AddSingleton<ModDetailsWindow>();
+        services.AddSingleton<VanillaReplacementWindow>();
 
         // 4. Commands
         services.AddSingleton<IPluginCommand, MainCommand>();

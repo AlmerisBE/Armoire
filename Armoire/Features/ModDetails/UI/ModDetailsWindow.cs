@@ -5,6 +5,7 @@ using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Models;
+using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
@@ -17,21 +18,25 @@ public class ModDetailsWindow : IDisposable {
     private readonly IPenumbraSyncManager syncManager;
     private readonly ILocalizationService loc;
     private readonly ITextureProvider textureProvider;
+    private readonly VanillaReplacementWindow vanillaWindow;
 
     public bool IsVisible { get; set; } = false;
     private string currentModId = string.Empty;
     private DetailedModState? currentState = null;
+    private EffectiveCollectionState? currentGlobalState = null;
 
     public ModDetailsWindow(
         IModDetailsResolver resolver,
         IPenumbraSyncManager syncManager,
         ILocalizationService loc,
-        ITextureProvider textureProvider
+        ITextureProvider textureProvider,
+        VanillaReplacementWindow vanillaWindow
     ) {
         this.resolver = resolver;
         this.syncManager = syncManager;
         this.loc = loc;
         this.textureProvider = textureProvider;
+        this.vanillaWindow = vanillaWindow;
 
         this.syncManager.OnStatusUpdated += RefreshData;
     }
@@ -52,6 +57,7 @@ public class ModDetailsWindow : IDisposable {
         if (!this.IsVisible) {
             return;
         }
+        this.currentGlobalState = globalState;
 
         if (!string.IsNullOrEmpty(this.currentModId) && globalState != null) {
             this.currentState = this.resolver.ResolveModDetails(this.currentModId, globalState);
@@ -93,6 +99,7 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.EndTabBar();
             }
         }
+        this.vanillaWindow.Draw();
         ImGui.End();
     }
 
@@ -215,7 +222,7 @@ public class ModDetailsWindow : IDisposable {
             }
 
             if (ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40))) {
-                // Action future : Ouvrir le module de Swap
+                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
             }
             if (item.IsConflicting) {
                 ImGui.PopStyleColor();
