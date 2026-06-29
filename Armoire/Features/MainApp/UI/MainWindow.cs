@@ -1,3 +1,6 @@
+namespace Armoire.Features.MainApp.UI;
+
+using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -5,23 +8,22 @@ using Dalamud.Interface.Windowing;
 using System;
 using System.Collections.Generic;
 
-namespace Armoire.Features.MainApp.UI;
-
 public class MainWindow : Window, IDisposable {
     private readonly List<IUiComponent> attachedComponents;
+    private readonly ILocalizationService loc;
 
     public event Action? OnConfigRequested;
-
     public IReadOnlyCollection<IUiComponent> AttachedComponents => attachedComponents;
 
-    public MainWindow() : base("Armoire", ImGuiWindowFlags.NoCollapse) {
-        attachedComponents = new List<IUiComponent>();
+    public MainWindow(ILocalizationService localizationService) : base("Armoire", ImGuiWindowFlags.NoCollapse) {
+        this.loc = localizationService;
+        this.attachedComponents = new List<IUiComponent>();
         Size = new System.Numerics.Vector2(600, 450);
         SizeCondition = ImGuiCond.FirstUseEver;
     }
 
     public void AttachComponent(IUiComponent component) {
-        attachedComponents.Add(component);
+        this.attachedComponents.Add(component);
     }
 
     public void InvokeConfigRequested() {
@@ -30,7 +32,7 @@ public class MainWindow : Window, IDisposable {
 
     public override void Draw() {
         ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted("Welcome to Armoire!");
+        ImGui.TextUnformatted(this.loc.GetString("MainWindow_Welcome"));
 
         ImGui.SameLine(ImGui.GetWindowWidth() - ImGui.GetStyle().WindowPadding.X - 30);
         if (ImGui.Button(FontAwesomeIcon.Cog.ToIconString())) {
@@ -41,17 +43,17 @@ public class MainWindow : Window, IDisposable {
         ImGui.Separator();
         ImGui.Spacing();
 
-        foreach (var component in attachedComponents) {
+        foreach (var component in this.attachedComponents) {
             component.Draw();
         }
     }
 
     public void Dispose() {
-        foreach (var component in attachedComponents) {
+        foreach (var component in this.attachedComponents) {
             if (component is IDisposable disposableComponent) {
                 disposableComponent.Dispose();
             }
         }
-        attachedComponents.Clear();
+        this.attachedComponents.Clear();
     }
 }

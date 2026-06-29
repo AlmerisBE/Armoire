@@ -1,4 +1,5 @@
 using Armoire.Core.Commands;
+using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.DiagnosticsUI;
@@ -31,6 +32,8 @@ public static class ServiceConfigurator {
         services.AddSingleton(notificationManager);
 
         // 2. Core services
+        services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<ConfigWindow>();
         services.AddSingleton<MainWindow>();
         services.AddSingleton<IWindowManager, WindowManager>();

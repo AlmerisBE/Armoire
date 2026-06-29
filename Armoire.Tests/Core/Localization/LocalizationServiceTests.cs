@@ -2,7 +2,7 @@ using Armoire.Core.Localization;
 using NSubstitute;
 using Xunit;
 
-namespace Armoire.Tests;
+namespace Armoire.Tests.Core.Localization;
 
 public class LocalizationServiceTests : IDisposable {
     private readonly string tempDirectory;

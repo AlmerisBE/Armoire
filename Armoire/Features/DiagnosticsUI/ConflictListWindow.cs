@@ -1,13 +1,19 @@
 ﻿namespace Armoire.Features.DiagnosticsUI;
 
+using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine.Models;
 using Dalamud.Bindings.ImGui;
 using System.Collections.Generic;
 using System.Numerics;
 
 public class ConflictListWindow {
+    private readonly ILocalizationService loc;
     public bool IsVisible { get; set; } = false;
     private List<PenumbraMod> currentConflicts = new();
+
+    public ConflictListWindow(ILocalizationService localizationService) {
+        this.loc = localizationService;
+    }
 
     public void Open() {
         this.IsVisible = true;
@@ -23,20 +29,20 @@ public class ConflictListWindow {
         bool windowOpen = this.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(900, 500), ImGuiCond.FirstUseEver);
 
-        if (ImGui.Begin("Détails des mods écrasés (Victimes)", ref windowOpen)) {
+        if (ImGui.Begin(this.loc.GetString("Conflict_WindowTitle"), ref windowOpen)) {
             if (!windowOpen) {
                 this.IsVisible = false;
             }
 
-            ImGui.TextWrapped($"Cette liste affiche uniquement les {this.currentConflicts.Count} mods dont les fichiers sont annulés par des mods de priorité supérieure.");
+            ImGui.TextWrapped(string.Format(this.loc.GetString("Conflict_Description"), this.currentConflicts.Count));
             ImGui.Spacing();
 
             if (ImGui.BeginTable("ConflictsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
                 ImGui.TableSetupScrollFreeze(0, 1);
-                ImGui.TableSetupColumn("Mod Écrasé (Victime)", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Emplacements touchés", ImGuiTableColumnFlags.WidthFixed, 150f);
-                ImGui.TableSetupColumn("Écrasé par (Gagnants)", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Priorité", ImGuiTableColumnFlags.WidthFixed, 60f);
+                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColVictim"), ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColSlots"), ImGuiTableColumnFlags.WidthFixed, 150f);
+                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColWinners"), ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColPriority"), ImGuiTableColumnFlags.WidthFixed, 60f);
                 ImGui.TableHeadersRow();
 
                 foreach (var mod in this.currentConflicts) {
@@ -46,7 +52,7 @@ public class ConflictListWindow {
                     ImGui.TableNextColumn();
                     ImGui.TextUnformatted(mod.Name);
 
-                    // Column 2: Equipment Slots
+                    // Column 2: Equipment Slots (To be translated later with Lumina)
                     ImGui.TableNextColumn();
                     string slots = string.Join(", ", mod.ConflictingSlots);
                     ImGui.TextWrapped(slots);

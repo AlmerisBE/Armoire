@@ -1,4 +1,4 @@
-namespace Armoire.Tests.Features.Penumbra.Core;
+namespace Armoire.Tests.Features.ConflictEngine;
 
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;

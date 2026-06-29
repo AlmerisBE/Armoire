@@ -1,8 +1,8 @@
-namespace Armoire.Tests.Features.Penumbra.UI;
+namespace Armoire.Tests.Features.DiagnosticsUI;
 
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
-using Armoire.Features.Penumbra.UI;
+using Armoire.Features.DiagnosticsUI;
 using NSubstitute;
 using System;
 using Xunit;
