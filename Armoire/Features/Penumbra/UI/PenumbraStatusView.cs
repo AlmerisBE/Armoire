@@ -8,10 +8,12 @@ using System.Numerics;
 public class PenumbraStatusView : IUiComponent {
     private readonly PenumbraStatusPresenter presenter;
     private readonly ModScannerWindow modScannerWindow;
+    private readonly ConflictListWindow conflictListWindow;
 
     public PenumbraStatusView(PenumbraStatusPresenter presenter, ModScannerWindow modScannerWindow) {
         this.presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
         this.modScannerWindow = modScannerWindow ?? throw new ArgumentNullException(nameof(modScannerWindow));
+        this.conflictListWindow = conflictListWindow ?? throw new ArgumentNullException(nameof(conflictListWindow));
     }
 
     public void Draw() {
@@ -87,6 +89,14 @@ public class PenumbraStatusView : IUiComponent {
             this.modScannerWindow.Open(status.ModCount);
         }
 
+        if (status.ConflictModCount > 0) {
+            ImGui.SameLine();
+            if (ImGui.Button("Voir la liste des conflits")) {
+                this.conflictListWindow.Open(status.ConflictingMods);
+            }
+        }
+
         this.modScannerWindow.Draw();
+        this.conflictListWindow.Draw();
     }
 }

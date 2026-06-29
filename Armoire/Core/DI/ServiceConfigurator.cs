@@ -44,6 +44,7 @@ public static class ServiceConfigurator {
 
         // Section UI Penumbra
         services.AddSingleton<ModScannerWindow>();
+        services.AddSingleton<ConflictListWindow>();
         services.AddSingleton<PenumbraStatusPresenter>();
         services.AddSingleton<IUiComponent, PenumbraStatusView>();
 

@@ -235,6 +235,17 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         state.ConflictModCount = conflictingMods.Count;
+
+        // Map the string IDs back to their full PenumbraMod objects for the UI
+        foreach (var conflictId in conflictingMods) {
+            if (state.EffectiveMods.TryGetValue(conflictId, out var conflictingMod)) {
+                state.ConflictingMods.Add(conflictingMod);
+            }
+        }
+
+        // Alphabetical sort for better UX
+        state.ConflictingMods.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+
         return state;
     }
 

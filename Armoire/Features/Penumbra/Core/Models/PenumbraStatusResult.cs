@@ -1,5 +1,6 @@
 ﻿namespace Armoire.Features.Penumbra.Core.Models;
 
+using Armoire.Features.Penumbra.Core.Domain;
 using System.Collections.Generic;
 
 public class PenumbraStatusResult {
@@ -12,4 +13,6 @@ public class PenumbraStatusResult {
 
     public string PlayerName { get; set; } = string.Empty;
     public List<string> ActiveCollections { get; set; } = new();
+
+    public List<PenumbraMod> ConflictingMods { get; set; } = new();
 }
