@@ -1,8 +1,8 @@
 using Armoire.Core.Commands;
 using Armoire.Core.DI;
 using Armoire.Core.UI;
+using Armoire.Features.ConflictEngine;
 using Armoire.Features.MainApp.UI;
-using Armoire.Features.Penumbra.Interfaces;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Microsoft.Extensions.DependencyInjection;

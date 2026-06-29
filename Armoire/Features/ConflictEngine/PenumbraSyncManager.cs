@@ -1,9 +1,8 @@
-﻿namespace Armoire.Features.Penumbra.Core;
+﻿namespace Armoire.Features.ConflictEngine;
 
+using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.LocalScanner.Models;
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
 using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin.Services;
 using System;

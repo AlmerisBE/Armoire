@@ -1,6 +1,6 @@
-﻿namespace Armoire.Features.Penumbra.UI;
+﻿namespace Armoire.Features.DiagnosticsUI;
 
-using Armoire.Features.Penumbra.Core.Domain;
+using Armoire.Features.ConflictEngine.Models;
 using Dalamud.Bindings.ImGui;
 using System.Collections.Generic;
 using System.Numerics;

@@ -1,7 +1,7 @@
-namespace Armoire.Features.Penumbra.UI;
+namespace Armoire.Features.DiagnosticsUI;
 
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.ConflictEngine;
+using Armoire.Features.ConflictEngine.Models;
 using System;
 
 public class PenumbraStatusPresenter : IDisposable {

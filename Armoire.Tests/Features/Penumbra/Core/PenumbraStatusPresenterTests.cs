@@ -1,7 +1,7 @@
 namespace Armoire.Tests.Features.Penumbra.UI;
 
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.ConflictEngine;
+using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.Penumbra.UI;
 using NSubstitute;
 using System;

@@ -1,7 +1,6 @@
-namespace Armoire.Features.Penumbra.Core;
+namespace Armoire.Features.ConflictEngine;
 
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin.Services;
 using System;
@@ -31,11 +30,11 @@ public class PenumbraAnalyzer : IPenumbraAnalyzer {
         result.PlayerName = this.objectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
         if (result.IsPlayerConnected) {
-            // L'appel au wrapper officiel
+            // Official wrapper call
             var activeCollection = this.penumbraClient.GetActiveCollection();
             string targetId = activeCollection.Id.ToString();
 
-            // Résolution de secours (au cas où Penumbra ne renverrait qu'un nom avec Guid.Empty)
+            // Fallback resolution (in case Penumbra only returns a name with Guid.Empty)
             if (activeCollection.Id == Guid.Empty && !string.IsNullOrEmpty(activeCollection.Name)) {
                 var matched = this.penumbraRepository.GetAllCollections().FirstOrDefault(c => c.Name == activeCollection.Name);
                 if (matched != null) {

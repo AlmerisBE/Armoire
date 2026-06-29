@@ -1,4 +1,4 @@
-﻿namespace Armoire.Features.Penumbra.Core.Domain;
+﻿namespace Armoire.Features.ConflictEngine.Models;
 
 using System.Collections.Generic;
 

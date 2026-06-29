@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <Folder Include="Data\Locales\" />
+    <Folder Include="Features\Penumbra\UI\" />
   </ItemGroup>
 
   <ItemGroup>

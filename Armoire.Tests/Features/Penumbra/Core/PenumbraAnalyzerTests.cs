@@ -1,8 +1,7 @@
 namespace Armoire.Tests.Features.Penumbra.Core;
 
-using Armoire.Features.Penumbra.Core;
-using Armoire.Features.Penumbra.Core.Models;
-using Armoire.Features.Penumbra.Interfaces;
+using Armoire.Features.ConflictEngine;
+using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.PenumbraIpc;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
@@ -39,8 +38,8 @@ public class PenumbraAnalyzerTests {
         var etatSimule = new EffectiveCollectionState();
         etatSimule.HierarchyNames.Add("Ysaline Sylv'anir");
         etatSimule.HierarchyNames.Add("Default");
-        etatSimule.EffectiveMods["Mod1"] = new Armoire.Features.Penumbra.Core.Domain.PenumbraMod { IsEnabled = true };
-        etatSimule.EffectiveMods["Mod2"] = new Armoire.Features.Penumbra.Core.Domain.PenumbraMod { IsEnabled = false };
+        etatSimule.EffectiveMods["Mod1"] = new PenumbraMod { IsEnabled = true };
+        etatSimule.EffectiveMods["Mod2"] = new PenumbraMod { IsEnabled = false };
 
         fauxRepo.ComputeEffectiveState(Arg.Any<string>()).Returns(etatSimule);
 

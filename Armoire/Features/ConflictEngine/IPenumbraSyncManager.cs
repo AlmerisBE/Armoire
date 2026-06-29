@@ -1,6 +1,6 @@
-﻿namespace Armoire.Features.Penumbra.Interfaces;
+﻿namespace Armoire.Features.ConflictEngine;
 
-using Armoire.Features.Penumbra.Core.Models;
+using Armoire.Features.ConflictEngine.Models;
 using System;
 
 public interface IPenumbraSyncManager {

@@ -1,6 +1,5 @@
-﻿namespace Armoire.Features.Penumbra.Core.Models;
+﻿namespace Armoire.Features.ConflictEngine.Models;
 
-using Armoire.Features.Penumbra.Core.Domain;
 using System.Collections.Generic;
 
 public class EffectiveCollectionState {
