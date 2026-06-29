@@ -10,7 +10,12 @@ public class PenumbraStatusView : IUiComponent {
     private readonly ModScannerWindow modScannerWindow;
     private readonly ConflictListWindow conflictListWindow;
 
-    public PenumbraStatusView(PenumbraStatusPresenter presenter, ModScannerWindow modScannerWindow) {
+    // The constructor signature must explicitly request all 3 dependencies from the DI container
+    public PenumbraStatusView(
+        PenumbraStatusPresenter presenter,
+        ModScannerWindow modScannerWindow,
+        ConflictListWindow conflictListWindow) {
+
         this.presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
         this.modScannerWindow = modScannerWindow ?? throw new ArgumentNullException(nameof(modScannerWindow));
         this.conflictListWindow = conflictListWindow ?? throw new ArgumentNullException(nameof(conflictListWindow));
@@ -89,6 +94,7 @@ public class PenumbraStatusView : IUiComponent {
             this.modScannerWindow.Open(status.ModCount);
         }
 
+        // Display the conflict list trigger conditionally
         if (status.ConflictModCount > 0) {
             ImGui.SameLine();
             if (ImGui.Button("Voir la liste des conflits")) {
@@ -96,6 +102,7 @@ public class PenumbraStatusView : IUiComponent {
             }
         }
 
+        // Execute drawing routines for injected sub-windows
         this.modScannerWindow.Draw();
         this.conflictListWindow.Draw();
     }

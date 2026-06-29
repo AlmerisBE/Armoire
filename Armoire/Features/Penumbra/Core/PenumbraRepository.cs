@@ -172,7 +172,8 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         // 2. Compute dynamic file conflicts using scanner cache entries AND active options
-        var globalFileOwnership = new Dictionary<string, (string ModId, int Priority)>(StringComparer.OrdinalIgnoreCase);
+        // We now store the ModName alongside ModId to feed the OverwrittenBy property
+        var globalFileOwnership = new Dictionary<string, (string ModId, string ModName, int Priority)>(StringComparer.OrdinalIgnoreCase);
         var conflictingMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var scannerCache = this.modScannerManager.ModCache;
 
@@ -189,20 +190,15 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         foreach (var mod in evaluatedMods) {
             if (scannerCache.TryGetValue(mod.Id, out var cachedModData)) {
 
-                // A. Gather ALL effective paths for this mod (Default + Active Options)
                 var activeModPaths = new HashSet<string>(cachedModData.ModifiedGamePaths, StringComparer.OrdinalIgnoreCase);
 
                 foreach (var kvp in cachedModData.OptionGroups) {
                     var groupName = kvp.Key;
                     var groupDef = kvp.Value;
-
-                    // If the user hasn't configured this group, default value is 0
                     uint userSetting = mod.Settings.TryGetValue(groupName, out var val) ? val : 0;
 
                     if (groupDef.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase)) {
-                        // MULTI: userSetting is a bitmask
                         for (int i = 0; i < groupDef.OptionPaths.Count; i++) {
-                            // If the i-th bit is 1, the option is checked
                             if ((userSetting & (1u << i)) != 0) {
                                 foreach (var path in groupDef.OptionPaths[i]) {
                                     activeModPaths.Add(path);
@@ -210,7 +206,6 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                             }
                         }
                     } else {
-                        // SINGLE: userSetting is the direct index of the chosen option
                         int index = (int)userSetting;
                         if (index >= 0 && index < groupDef.OptionPaths.Count) {
                             foreach (var path in groupDef.OptionPaths[index]) {
@@ -220,15 +215,19 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                     }
                 }
 
-                // B. Evaluate conflicts on this final list of paths
                 foreach (var gamePath in activeModPaths) {
                     if (globalFileOwnership.TryGetValue(gamePath, out var ownerInfo)) {
-                        // Conflict detected! Mark the loser AND the winner.
+                        // FIX: Only the current mod (the loser) is marked as conflicting
                         conflictingMods.Add(mod.Id);
-                        conflictingMods.Add(ownerInfo.ModId);
+
+                        // Track which higher-priority mod is crushing this file
+                        mod.OverwrittenBy.Add(ownerInfo.ModName);
+
+                        // Analyze the file path to determine the equipment slot
+                        mod.ConflictingSlots.Add(ParseEquipmentSlot(gamePath));
                     } else {
                         // Take ownership of the file
-                        globalFileOwnership[gamePath] = (mod.Id, mod.Priority);
+                        globalFileOwnership[gamePath] = (mod.Id, mod.Name, mod.Priority);
                     }
                 }
             }
@@ -236,17 +235,84 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
 
         state.ConflictModCount = conflictingMods.Count;
 
-        // Map the string IDs back to their full PenumbraMod objects for the UI
         foreach (var conflictId in conflictingMods) {
             if (state.EffectiveMods.TryGetValue(conflictId, out var conflictingMod)) {
                 state.ConflictingMods.Add(conflictingMod);
             }
         }
 
-        // Alphabetical sort for better UX
         state.ConflictingMods.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
-
         return state;
+    }
+
+    // Helper method to extract the equipment slot from FFXIV game paths
+    private string ParseEquipmentSlot(string path) {
+        if (string.IsNullOrEmpty(path)) {
+            return "Unknown";
+        }
+
+        var lowerPath = path.ToLowerInvariant();
+
+        // Weapons
+        if (lowerPath.Contains("chara/weapon")) {
+            return "Weapon";
+        }
+
+        // Common equipment and accessories suffixes
+        if (lowerPath.Contains("_met.") || lowerPath.Contains("_met_")) {
+            return "Head";
+        }
+
+        if (lowerPath.Contains("_top.") || lowerPath.Contains("_top_")) {
+            return "Body";
+        }
+
+        if (lowerPath.Contains("_glv.") || lowerPath.Contains("_glv_")) {
+            return "Hands";
+        }
+
+        if (lowerPath.Contains("_dwn.") || lowerPath.Contains("_dwn_")) {
+            return "Legs";
+        }
+
+        if (lowerPath.Contains("_sho.") || lowerPath.Contains("_sho_")) {
+            return "Feet";
+        }
+
+        if (lowerPath.Contains("_ear.") || lowerPath.Contains("_ear_")) {
+            return "Earrings";
+        }
+
+        if (lowerPath.Contains("_nek.") || lowerPath.Contains("_nek_")) {
+            return "Necklace";
+        }
+
+        if (lowerPath.Contains("_wrs.") || lowerPath.Contains("_wrs_")) {
+            return "Bracelets";
+        }
+
+        if (lowerPath.Contains("_rir.") || lowerPath.Contains("_rir_") || lowerPath.Contains("_ril.") || lowerPath.Contains("_ril_")) {
+            return "Ring";
+        }
+
+        // Character customization
+        if (lowerPath.Contains("chara/human/")) {
+            if (lowerPath.Contains("face")) {
+                return "Face";
+            }
+
+            if (lowerPath.Contains("hair")) {
+                return "Hair";
+            }
+
+            if (lowerPath.Contains("tail")) {
+                return "Tail";
+            }
+
+            return "Body (Base)";
+        }
+
+        return "Other";
     }
 
     private void BuildLineage(string collectionId, HashSet<string> visited, List<PenumbraCollection> lineage) {
