@@ -2,17 +2,19 @@
 
 using System.Collections.Generic;
 
-/// <summary>
-/// Represents the footprint of a mod cached by Armoire for fast conflict detection.
-/// </summary>
-public class ArmoireModCacheEntry {
-    // The unique identifier of the mod (usually its directory name on the disk)
-    public string DirectoryName { get; set; } = string.Empty;
+public class ArmoireOptionGroup {
+    public string Type { get; set; } = "Single";
+    // The index of this list corresponds to the option index or the bit position
+    public List<HashSet<string>> OptionPaths { get; set; } = new();
+}
 
-    // The human-readable name of the mod (extracted from meta.json)
+public class ArmoireModCacheEntry {
+    public string DirectoryName { get; set; } = string.Empty;
     public string ModName { get; set; } = string.Empty;
 
-    // A HashSet for O(1) lookup performance. 
-    // Contains all the game paths (e.g., "chara/equipment/e6116/...") that this mod attempts to replace.
+    // Default modified files (without any options checked)
     public HashSet<string> ModifiedGamePaths { get; set; } = new(System.StringComparer.OrdinalIgnoreCase);
+
+    // NEW: Conditionally modified files, grouped by Group Name
+    public Dictionary<string, ArmoireOptionGroup> OptionGroups { get; set; } = new(System.StringComparer.OrdinalIgnoreCase);
 }

@@ -136,6 +136,7 @@ public class ModScannerManager : IModScannerManager, IDisposable {
         };
 
         try {
+            // 1. Read default paths
             var defaultModPath = Path.Combine(fullDirPath, "default_mod.json");
             if (File.Exists(defaultModPath)) {
                 var defaultData = JsonSerializer.Deserialize<PenumbraDefaultModJson>(File.ReadAllText(defaultModPath), options);
@@ -150,6 +151,37 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                 }
             }
 
+            // 2. NEW: Read option groups
+            var groupFiles = Directory.GetFiles(fullDirPath, "group_*.json");
+            foreach (var groupFile in groupFiles) {
+                try {
+                    var groupData = JsonSerializer.Deserialize<PenumbraGroupJson>(File.ReadAllText(groupFile), options);
+                    if (groupData != null && !string.IsNullOrEmpty(groupData.Name)) {
+                        var armoireGroup = new ArmoireOptionGroup { Type = groupData.Type };
+
+                        foreach (var option in groupData.Options) {
+                            var optionPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            if (option.Files != null) {
+                                foreach (var path in option.Files.Keys) {
+                                    optionPaths.Add(path);
+                                }
+                            }
+
+                            if (option.FileSwaps != null) {
+                                foreach (var path in option.FileSwaps.Keys) {
+                                    optionPaths.Add(path);
+                                }
+                            }
+
+                            armoireGroup.OptionPaths.Add(optionPaths);
+                        }
+
+                        entry.OptionGroups[groupData.Name] = armoireGroup;
+                    }
+                } catch { /* Ignore corrupted group files */ }
+            }
+
+            // 3. Read human-readable name if missing
             if (string.IsNullOrEmpty(fallbackName)) {
                 var metaPath = Path.Combine(fullDirPath, "meta.json");
                 if (File.Exists(metaPath)) {

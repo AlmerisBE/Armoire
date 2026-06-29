@@ -171,31 +171,63 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
             }
         }
 
-        // 2. Compute dynamic file conflicts using scanner cache entries
+        // 2. Compute dynamic file conflicts using scanner cache entries AND active options
         var globalFileOwnership = new Dictionary<string, (string ModId, int Priority)>(StringComparer.OrdinalIgnoreCase);
-        var conflictingMods = new HashSet<string>();
+        var conflictingMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var scannerCache = this.modScannerManager.ModCache;
 
-        // Sort mods by priority to evaluate the baseline correctly
         var evaluatedMods = new List<PenumbraMod>();
         foreach (var mod in state.EffectiveMods.Values) {
             if (mod.IsEnabled) {
                 evaluatedMods.Add(mod);
             }
         }
+
+        // Sort mods by priority (highest first)
         evaluatedMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
         foreach (var mod in evaluatedMods) {
-            // Find the file list inside our scanner manager cache
             if (scannerCache.TryGetValue(mod.Id, out var cachedModData)) {
-                foreach (var gamePath in cachedModData.ModifiedGamePaths) {
-                    if (globalFileOwnership.TryGetValue(gamePath, out var ownerInfo)) {
-                        // Conflict found! A mod with higher or equal priority already claimed this file
-                        if (ownerInfo.Priority >= mod.Priority) {
-                            conflictingMods.Add(mod.Id);
+
+                // A. Gather ALL effective paths for this mod (Default + Active Options)
+                var activeModPaths = new HashSet<string>(cachedModData.ModifiedGamePaths, StringComparer.OrdinalIgnoreCase);
+
+                foreach (var kvp in cachedModData.OptionGroups) {
+                    var groupName = kvp.Key;
+                    var groupDef = kvp.Value;
+
+                    // If the user hasn't configured this group, default value is 0
+                    uint userSetting = mod.Settings.TryGetValue(groupName, out var val) ? val : 0;
+
+                    if (groupDef.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase)) {
+                        // MULTI: userSetting is a bitmask
+                        for (int i = 0; i < groupDef.OptionPaths.Count; i++) {
+                            // If the i-th bit is 1, the option is checked
+                            if ((userSetting & (1u << i)) != 0) {
+                                foreach (var path in groupDef.OptionPaths[i]) {
+                                    activeModPaths.Add(path);
+                                }
+                            }
                         }
                     } else {
-                        // Register ownership for lower priority checks
+                        // SINGLE: userSetting is the direct index of the chosen option
+                        int index = (int)userSetting;
+                        if (index >= 0 && index < groupDef.OptionPaths.Count) {
+                            foreach (var path in groupDef.OptionPaths[index]) {
+                                activeModPaths.Add(path);
+                            }
+                        }
+                    }
+                }
+
+                // B. Evaluate conflicts on this final list of paths
+                foreach (var gamePath in activeModPaths) {
+                    if (globalFileOwnership.TryGetValue(gamePath, out var ownerInfo)) {
+                        // Conflict detected! Mark the loser AND the winner.
+                        conflictingMods.Add(mod.Id);
+                        conflictingMods.Add(ownerInfo.ModId);
+                    } else {
+                        // Take ownership of the file
                         globalFileOwnership[gamePath] = (mod.Id, mod.Priority);
                     }
                 }
