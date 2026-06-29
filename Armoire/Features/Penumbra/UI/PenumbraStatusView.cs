@@ -10,7 +10,6 @@ public class PenumbraStatusView : IUiComponent {
     private readonly ModScannerWindow modScannerWindow;
     private readonly ConflictListWindow conflictListWindow;
 
-    // The constructor signature must explicitly request all 3 dependencies from the DI container
     public PenumbraStatusView(
         PenumbraStatusPresenter presenter,
         ModScannerWindow modScannerWindow,
@@ -72,7 +71,6 @@ public class PenumbraStatusView : IUiComponent {
             ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "  Aucune collection active détectée.");
         } else {
             int visualIndex = 0;
-            // Iterate backwards to display the active root collection first
             for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
                 string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
                 ImGui.Text($"{prefix}{status.ActiveCollections[i]}");
@@ -94,16 +92,15 @@ public class PenumbraStatusView : IUiComponent {
             this.modScannerWindow.Open(status.ModCount);
         }
 
-        // Display the conflict list trigger conditionally
         if (status.ConflictModCount > 0) {
             ImGui.SameLine();
             if (ImGui.Button("Voir la liste des conflits")) {
-                this.conflictListWindow.Open(status.ConflictingMods);
+                this.conflictListWindow.Open();
             }
         }
 
-        // Execute drawing routines for injected sub-windows
         this.modScannerWindow.Draw();
-        this.conflictListWindow.Draw();
+
+        this.conflictListWindow.Draw(status.ConflictingMods);
     }
 }

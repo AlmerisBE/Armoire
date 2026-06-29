@@ -9,15 +9,16 @@ public class ConflictListWindow {
     public bool IsVisible { get; set; } = false;
     private List<PenumbraMod> currentConflicts = new();
 
-    public void Open(List<PenumbraMod> conflicts) {
-        this.currentConflicts = conflicts ?? new List<PenumbraMod>();
+    public void Open() {
         this.IsVisible = true;
     }
 
-    public void Draw() {
+    public void Draw(List<PenumbraMod> liveConflicts) {
         if (!this.IsVisible) {
             return;
         }
+
+        this.currentConflicts = liveConflicts ?? new List<PenumbraMod>();
 
         bool windowOpen = this.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(900, 500), ImGuiCond.FirstUseEver);
@@ -30,11 +31,8 @@ public class ConflictListWindow {
             ImGui.TextWrapped($"Cette liste affiche uniquement les {this.currentConflicts.Count} mods dont les fichiers sont annulés par des mods de priorité supérieure.");
             ImGui.Spacing();
 
-            // Expand table to 4 columns to accommodate the new data
             if (ImGui.BeginTable("ConflictsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
-
                 ImGui.TableSetupScrollFreeze(0, 1);
-
                 ImGui.TableSetupColumn("Mod Écrasé (Victime)", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableSetupColumn("Emplacements touchés", ImGuiTableColumnFlags.WidthFixed, 150f);
                 ImGui.TableSetupColumn("Écrasé par (Gagnants)", ImGuiTableColumnFlags.WidthStretch);
