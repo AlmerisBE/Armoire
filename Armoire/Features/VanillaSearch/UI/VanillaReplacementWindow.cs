@@ -19,7 +19,11 @@ public class VanillaReplacementWindow {
     public bool IsVisible { get; set; } = false;
     private string currentSlotKey = string.Empty;
     private string currentModId = string.Empty;
-    private string searchQuery = string.Empty;
+
+    // 3 distinct search inputs
+    private string searchName = string.Empty;
+    private string searchExpansion = string.Empty;
+    private string searchOrigin = string.Empty;
 
     private List<VanillaItem> availableItems = new();
     private EffectiveCollectionState? lastGlobalState;
@@ -34,7 +38,11 @@ public class VanillaReplacementWindow {
         this.currentSlotKey = slotKey;
         this.currentModId = modId;
         this.lastGlobalState = globalState;
-        this.searchQuery = string.Empty;
+
+        // Reset all filters when opening the window
+        this.searchName = string.Empty;
+        this.searchExpansion = string.Empty;
+        this.searchOrigin = string.Empty;
 
         // Fetch eligible items immediately on open
         this.availableItems = this.searchService.GetAvailableReplacements(slotKey, globalState);
@@ -47,24 +55,46 @@ public class VanillaReplacementWindow {
         }
 
         bool windowOpen = this.IsVisible;
-        ImGui.SetNextWindowSize(new Vector2(600, 500), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSize(new Vector2(650, 550), ImGuiCond.FirstUseEver);
 
         if (ImGui.Begin("Sélectionner un objet de remplacement###VanillaReplacement", ref windowOpen, ImGuiWindowFlags.NoCollapse)) {
             if (!windowOpen) {
                 this.IsVisible = false;
             }
 
-            // Search Filter Bar
+            // --- Multi-Criteria Search Filters ---
+
+            // 1. Name Filter (Full Width)
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-            ImGui.InputTextWithHint("##SearchVanillaItem", "Rechercher un objet par nom...", ref this.searchQuery, 128);
+            ImGui.InputTextWithHint("##SearchName", "Filtrer par nom (ex: protecteur)...", ref this.searchName, 128);
+
+            // 2. Expansion and Origin Filters (Half Width each, side-by-side)
+            float halfWidth = (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X) / 2f;
+
+            ImGui.SetNextItemWidth(halfWidth);
+            ImGui.InputTextWithHint("##SearchExpansion", "Extension (ex: Heavensward)...", ref this.searchExpansion, 128);
+
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(halfWidth);
+            ImGui.InputTextWithHint("##SearchOrigin", "Origine (ex: Donjon)...", ref this.searchOrigin, 128);
+
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
-            // Filter lists based on user input
-            var filteredItems = string.IsNullOrWhiteSpace(this.searchQuery)
-                ? this.availableItems
-                : this.availableItems.Where(i => i.Name.Contains(this.searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+            // --- Apply Filters (AND logic) ---
+            var filteredItems = this.availableItems.Where(i =>
+                (string.IsNullOrWhiteSpace(this.searchName) || i.Name.Contains(this.searchName, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(this.searchExpansion) || i.ExpansionName.Contains(this.searchExpansion, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(this.searchOrigin) || i.Origin.Contains(this.searchOrigin, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
 
+            // --- Draw List ---
             if (ImGui.BeginChild("VanillaItemsList", new Vector2(0, 0), true)) {
+                if (!filteredItems.Any()) {
+                    ImGui.Spacing();
+                    ImGui.TextDisabled("Aucun équipement trouvé pour ces critères.");
+                }
+
                 foreach (var item in filteredItems) {
                     ImGui.PushID($"vanilla_{item.ItemId}");
 

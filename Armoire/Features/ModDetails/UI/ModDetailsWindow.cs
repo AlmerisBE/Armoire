@@ -222,7 +222,9 @@ public class ModDetailsWindow : IDisposable {
             }
 
             if (ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40))) {
-                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
+                if (this.currentGlobalState != null && this.currentState != null) {
+                    this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
+                }
             }
             if (item.IsConflicting) {
                 ImGui.PopStyleColor();
