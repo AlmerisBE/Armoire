@@ -2,6 +2,7 @@
 
 using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine.Models;
+using Armoire.Features.ModSwapper;
 using Armoire.Features.VanillaSearch.Models;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -15,6 +16,7 @@ public class VanillaReplacementWindow {
     private readonly IVanillaSearchService searchService;
     private readonly ITextureProvider textureProvider;
     private readonly ILocalizationService loc;
+    private readonly IModSwapperService swapperService;
 
     public bool IsVisible { get; set; } = false;
     private string currentSlotKey = string.Empty;
@@ -28,10 +30,11 @@ public class VanillaReplacementWindow {
     private List<VanillaItem> availableItems = new();
     private EffectiveCollectionState? lastGlobalState;
 
-    public VanillaReplacementWindow(IVanillaSearchService searchService, ITextureProvider textureProvider, ILocalizationService loc) {
+    public VanillaReplacementWindow(IVanillaSearchService searchService, ITextureProvider textureProvider, ILocalizationService loc, IModSwapperService swapperService) {
         this.searchService = searchService;
         this.textureProvider = textureProvider;
         this.loc = loc;
+        this.swapperService = swapperService;
     }
 
     public void Open(string slotKey, string modId, EffectiveCollectionState globalState) {
@@ -57,7 +60,7 @@ public class VanillaReplacementWindow {
         bool windowOpen = this.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(650, 550), ImGuiCond.FirstUseEver);
 
-        if (ImGui.Begin("Sélectionner un objet de remplacement###VanillaReplacement", ref windowOpen, ImGuiWindowFlags.NoCollapse)) {
+        if (ImGui.Begin(this.loc.GetString("UI_VanillaWindow_Title"), ref windowOpen, ImGuiWindowFlags.NoCollapse)) {
             if (!windowOpen) {
                 this.IsVisible = false;
             }
@@ -66,18 +69,18 @@ public class VanillaReplacementWindow {
 
             // 1. Name Filter (Full Width)
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-            ImGui.InputTextWithHint("##SearchName", "Filtrer par nom (ex: protecteur)...", ref this.searchName, 128);
+            ImGui.InputTextWithHint("##SearchName", this.loc.GetString("UI_VanillaWindow_SearchName"), ref this.searchName, 128);
 
             // 2. Expansion and Origin Filters (Half Width each, side-by-side)
             float halfWidth = (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X) / 2f;
 
             ImGui.SetNextItemWidth(halfWidth);
-            ImGui.InputTextWithHint("##SearchExpansion", "Extension (ex: Heavensward)...", ref this.searchExpansion, 128);
+            ImGui.InputTextWithHint("##SearchExpansion", this.loc.GetString("UI_VanillaWindow_SearchExp"), ref this.searchExpansion, 128);
 
             ImGui.SameLine();
 
             ImGui.SetNextItemWidth(halfWidth);
-            ImGui.InputTextWithHint("##SearchOrigin", "Origine (ex: Donjon)...", ref this.searchOrigin, 128);
+            ImGui.InputTextWithHint("##SearchOrigin", this.loc.GetString("UI_VanillaWindow_SearchOrigin"), ref this.searchOrigin, 128);
 
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
@@ -92,7 +95,7 @@ public class VanillaReplacementWindow {
             if (ImGui.BeginChild("VanillaItemsList", new Vector2(0, 0), true)) {
                 if (!filteredItems.Any()) {
                     ImGui.Spacing();
-                    ImGui.TextDisabled("Aucun équipement trouvé pour ces critères.");
+                    ImGui.TextDisabled(this.loc.GetString("UI_VanillaWindow_NoResults"));
                 }
 
                 foreach (var item in filteredItems) {
@@ -118,8 +121,8 @@ public class VanillaReplacementWindow {
                     // 3. Draw Selection Button aligned to the right side
                     ImGui.SameLine(ImGui.GetWindowWidth() - 90);
                     ImGui.SetCursorPosY(textPos.Y + 6);
-                    if (ImGui.Button("Choisir")) {
-                        // Future action: Trigger the ModSwapper engine with item.ModelId
+                    if (ImGui.Button(this.loc.GetString("UI_VanillaWindow_BtnChoose"))) {
+                        bool success = this.swapperService.PerformSwap(this.currentModId, this.currentSlotKey, item.ModelId);
                         this.IsVisible = false;
                     }
 

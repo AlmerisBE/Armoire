@@ -13,7 +13,7 @@ public class LocalizationServiceTests : IDisposable {
         // 1. ARRANGE (Global Setup)
         // Create a unique temporary directory for this specific test run
         this.tempDirectory = Path.Combine(Path.GetTempPath(), "ArmoireTests_" + Guid.NewGuid().ToString());
-        this.localesDirectory = Path.Combine(this.tempDirectory, "Locales");
+        this.localesDirectory = Path.Combine(this.tempDirectory, "Data", "Locales");
         Directory.CreateDirectory(this.localesDirectory);
 
         // Create dummy JSON files for English and French

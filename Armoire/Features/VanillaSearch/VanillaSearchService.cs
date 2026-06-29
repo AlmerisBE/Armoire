@@ -1,5 +1,6 @@
 ﻿namespace Armoire.Features.VanillaSearch;
 
+using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.VanillaSearch.Models;
@@ -13,14 +14,15 @@ using System.Text.RegularExpressions;
 public class VanillaSearchService : IVanillaSearchService {
     private readonly IDataManager dataManager;
     private readonly IModScannerManager scannerManager;
+    private readonly ILocalizationService loc;
 
     // Caches for fast cross-referencing
     private readonly HashSet<uint> craftedItemIds = [];
 
-    public VanillaSearchService(IDataManager dataManager, IModScannerManager scannerManager) {
+    public VanillaSearchService(IDataManager dataManager, IModScannerManager scannerManager, ILocalizationService loc) {
         this.dataManager = dataManager;
         this.scannerManager = scannerManager;
-
+        this.loc = loc;
         InitializeMetadataCaches();
     }
 
@@ -80,25 +82,22 @@ public class VanillaSearchService : IVanillaSearchService {
     }
 
     private string DeduceItemOrigin(Item item) {
-        // 1. Check if the item can be crafted
         if (this.craftedItemIds.Contains(item.RowId)) {
-            return "Artisanat (Crafted)";
+            return this.loc.GetString("Origin_Crafted");
         }
 
-        // 2. Heuristics based on tradability and item level for high-end gear
         if (item.IsUntradable) {
             if (item.Rarity == 3) {
-                return "Raid / Mémoquartz (Raid/Tomestone)";
+                return this.loc.GetString("Origin_Raid");
             }
 
             if (item.Rarity == 2) {
-                return "Donjon (Dungeon)";
+                return this.loc.GetString("Origin_Dungeon");
             }
 
-            return "Spécial / Quête (Quest/Reward)";
+            return this.loc.GetString("Origin_Quest");
         }
-
-        return "Achat / Butin standard (Vendor/Drop)";
+        return this.loc.GetString("Origin_Vendor");
     }
 
     private HashSet<string> GetModifiedModelIds(string slotKey, EffectiveCollectionState globalState) {
@@ -153,25 +152,25 @@ public class VanillaSearchService : IVanillaSearchService {
     /// </summary>
     private string GetExpansionName(byte equipLevel) {
         if (equipLevel <= 50) {
-            return "A Realm Reborn";
+            return this.loc.GetString("Exp_ARR");
         }
 
         if (equipLevel <= 60) {
-            return "Heavensward";
+            return this.loc.GetString("Exp_HW");
         }
 
         if (equipLevel <= 70) {
-            return "Stormblood";
+            return this.loc.GetString("Exp_SB");
         }
 
         if (equipLevel <= 80) {
-            return "Shadowbringers";
+            return this.loc.GetString("Exp_ShB");
         }
 
         if (equipLevel <= 90) {
-            return "Endwalker";
+            return this.loc.GetString("Exp_EW");
         }
 
-        return "Dawntrail";
+        return this.loc.GetString("Exp_DT");
     }
 }

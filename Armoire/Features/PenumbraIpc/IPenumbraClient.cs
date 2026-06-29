@@ -16,4 +16,6 @@ public interface IPenumbraClient {
     int GetModsCount();
     (Guid Id, string Name) GetActiveCollection();
     string GetModDirectory();
+    bool ReloadMod(string modDirectory);
+    void RedrawAll();
 }

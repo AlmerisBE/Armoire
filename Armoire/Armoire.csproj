@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <Folder Include="Data\Locales\" />
-    <Folder Include="Features\ModSwapper\" />
   </ItemGroup>
 
   <ItemGroup>

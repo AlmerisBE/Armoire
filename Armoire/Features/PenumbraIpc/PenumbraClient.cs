@@ -19,6 +19,9 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
     private readonly ICallGateSubscriber<Action> initializedSubscriber;
     private readonly ICallGateSubscriber<Action> disposedSubscriber;
 
+    private readonly ICallGateSubscriber<string, string, int> reloadModSubscriber;
+    private readonly ICallGateSubscriber<int, int> redrawAllSubscriber;
+
     public event Action? OnInitialized;
     public event Action? OnDisposed;
 
@@ -37,6 +40,9 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
 
         this.disposedSubscriber = pluginInterface.GetIpcSubscriber<Action>("Penumbra.Disposed");
         this.disposedSubscriber.Subscribe(HandleDisposed);
+
+        this.reloadModSubscriber = pluginInterface.GetIpcSubscriber<string, string, int>("Penumbra.ReloadMod");
+        this.redrawAllSubscriber = pluginInterface.GetIpcSubscriber<int, int>("Penumbra.RedrawAll");
     }
 
     private void HandleInitialized() {
@@ -113,6 +119,34 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         }
 
         return result;
+    }
+
+    public bool ReloadMod(string modDirectory) {
+        if (!IsEnabled()) {
+            return false;
+        }
+
+        try {
+            // Dans Penumbra, ReloadMod prend (Directory, Name). Le nom peut être vide.
+            var result = this.reloadModSubscriber.InvokeFunc(modDirectory, string.Empty);
+            return result == 0; // 0 = Success dans l'API Penumbra
+        } catch (Exception ex) {
+            this.pluginLog.Error(ex, $"[PenumbraClient] Failed to reload mod at {modDirectory}");
+            return false;
+        }
+    }
+
+    public void RedrawAll() {
+        if (!IsEnabled()) {
+            return;
+        }
+
+        try {
+            // 0 = Tous les personnages
+            this.redrawAllSubscriber.InvokeFunc(0);
+        } catch (Exception ex) {
+            this.pluginLog.Error(ex, "[PenumbraClient] Failed to send RedrawAll command.");
+        }
     }
 
     public void Dispose() {

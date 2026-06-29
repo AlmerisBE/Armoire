@@ -5,6 +5,7 @@ using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Models;
+using Armoire.Features.ModSwapper;
 using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -19,6 +20,7 @@ public class ModDetailsWindow : IDisposable {
     private readonly ILocalizationService loc;
     private readonly ITextureProvider textureProvider;
     private readonly VanillaReplacementWindow vanillaWindow;
+    private readonly IModSwapperService swapperService;
 
     public bool IsVisible { get; set; } = false;
     private string currentModId = string.Empty;
@@ -30,13 +32,15 @@ public class ModDetailsWindow : IDisposable {
         IPenumbraSyncManager syncManager,
         ILocalizationService loc,
         ITextureProvider textureProvider,
-        VanillaReplacementWindow vanillaWindow
+        VanillaReplacementWindow vanillaWindow,
+        IModSwapperService swapperService
     ) {
         this.resolver = resolver;
         this.syncManager = syncManager;
         this.loc = loc;
         this.textureProvider = textureProvider;
         this.vanillaWindow = vanillaWindow;
+        this.swapperService = swapperService;
 
         this.syncManager.OnStatusUpdated += RefreshData;
     }
@@ -151,7 +155,9 @@ public class ModDetailsWindow : IDisposable {
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
         if (ImGui.Button("Réinitialiser le mod (Paramètres par défaut)")) {
-            // Future action
+            if (this.currentState != null) {
+                this.swapperService.ResetMod(this.currentState.ModId);
+            }
         }
     }
 
@@ -203,6 +209,7 @@ public class ModDetailsWindow : IDisposable {
         foreach (var item in itemsInSlot) {
             ImGui.PushID(item.BaseName + item.IconId);
 
+            ImGui.BeginGroup();
             if (item.IconId > 0) {
                 var iconWrap = this.textureProvider.GetFromGameIcon(new GameIconLookup(item.IconId)).GetWrapOrDefault();
                 if (iconWrap != null) {
@@ -221,11 +228,8 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1, 0.4f, 0.4f, 1));
             }
 
-            if (ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40))) {
-                if (this.currentGlobalState != null && this.currentState != null) {
-                    this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
-                }
-            }
+            bool selected = ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40));
+
             if (item.IsConflicting) {
                 ImGui.PopStyleColor();
             }
@@ -239,6 +243,11 @@ public class ModDetailsWindow : IDisposable {
             } else {
                 ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
                 ImGui.TextColored(new Vector4(0.4f, 1, 0.4f, 1), "(Actif et appliqué)");
+            }
+            ImGui.EndGroup();
+
+            if (ImGui.IsItemClicked() && this.currentGlobalState != null && this.currentState != null) {
+                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
             }
 
             ImGui.PopID();

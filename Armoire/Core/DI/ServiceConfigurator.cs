@@ -9,6 +9,7 @@ using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.UI;
+using Armoire.Features.ModSwapper;
 using Armoire.Features.PenumbraIpc;
 using Armoire.Features.VanillaSearch;
 using Armoire.Features.VanillaSearch.UI;
@@ -51,6 +52,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<CommandRegistry>();
         services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
+        services.AddSingleton<IModSwapperService, ModSwapperService>();
 
         // 3. Features dependencies (Penumbra)
         services.AddSingleton<IPenumbraClient, PenumbraClient>();
