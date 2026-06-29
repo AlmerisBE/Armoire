@@ -35,5 +35,6 @@
   "Scanner_BtnPause": "Pause",
   "Scanner_BtnResume": "Resume Scan",
   "Scanner_BtnCancel": "Cancel",
-  "Scanner_BtnBackground": "Continue in background"
+  "Scanner_BtnBackground": "Continue in background",
+  "Conflict_SearchHint": "Search a mod by name (victim or winner)..."
 }

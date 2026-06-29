@@ -35,5 +35,6 @@
   "Scanner_BtnPause": "Mettre en Pause",
   "Scanner_BtnResume": "Reprendre le Scan",
   "Scanner_BtnCancel": "Annuler",
-  "Scanner_BtnBackground": "Continuer en arrière-plan"
+  "Scanner_BtnBackground": "Continuer en arrière-plan",
+  "Conflict_SearchHint": "Rechercher un mod par nom (victime ou gagnant)..."
 }

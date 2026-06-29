@@ -3,13 +3,17 @@
 using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine.Models;
 using Dalamud.Bindings.ImGui;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 public class ConflictListWindow {
     private readonly ILocalizationService loc;
     public bool IsVisible { get; set; } = false;
+
     private List<PenumbraMod> currentConflicts = new();
+    private string searchQuery = string.Empty;
 
     public ConflictListWindow(ILocalizationService localizationService) {
         this.loc = localizationService;
@@ -17,6 +21,7 @@ public class ConflictListWindow {
 
     public void Open() {
         this.IsVisible = true;
+        this.searchQuery = string.Empty;
     }
 
     public void Draw(List<PenumbraMod> liveConflicts) {
@@ -37,6 +42,17 @@ public class ConflictListWindow {
             ImGui.TextWrapped(string.Format(this.loc.GetString("Conflict_Description"), this.currentConflicts.Count));
             ImGui.Spacing();
 
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+            ImGui.InputTextWithHint("##SearchConflict", this.loc.GetString("Conflict_SearchHint"), ref this.searchQuery, 256);
+            ImGui.Spacing();
+
+            var filteredConflicts = string.IsNullOrWhiteSpace(this.searchQuery)
+                ? this.currentConflicts
+                : this.currentConflicts.Where(m =>
+                    m.Name.Contains(this.searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    m.OverwrittenBy.Any(winner => winner.Contains(this.searchQuery, StringComparison.OrdinalIgnoreCase))
+                  ).ToList();
+
             if (ImGui.BeginTable("ConflictsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
                 ImGui.TableSetupScrollFreeze(0, 1);
                 ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColVictim"), ImGuiTableColumnFlags.WidthStretch);
@@ -45,14 +61,14 @@ public class ConflictListWindow {
                 ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColPriority"), ImGuiTableColumnFlags.WidthFixed, 60f);
                 ImGui.TableHeadersRow();
 
-                foreach (var mod in this.currentConflicts) {
+                foreach (var mod in filteredConflicts) {
                     ImGui.TableNextRow();
 
                     // Column 1: The Loser Mod
                     ImGui.TableNextColumn();
                     ImGui.TextUnformatted(mod.Name);
 
-                    // Column 2: Equipment Slots (To be translated later with Lumina)
+                    // Column 2: Equipment Slots
                     ImGui.TableNextColumn();
                     string slots = string.Join(", ", mod.ConflictingSlots);
                     ImGui.TextWrapped(slots);

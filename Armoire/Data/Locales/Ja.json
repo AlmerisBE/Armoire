@@ -35,5 +35,6 @@
   "Scanner_BtnPause": "一時停止",
   "Scanner_BtnResume": "スキャン再開",
   "Scanner_BtnCancel": "キャンセル",
-  "Scanner_BtnBackground": "バックグラウンドで続行"
+  "Scanner_BtnBackground": "バックグラウンドで続行",
+  "Conflict_SearchHint": "Mod名で検索 (被害者または勝者)..."
 }
