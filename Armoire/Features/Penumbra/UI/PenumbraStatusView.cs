@@ -1,6 +1,7 @@
 namespace Armoire.Features.Penumbra.UI;
 
 using Armoire.Core.UI;
+using Armoire.Features.Penumbra.Core.Models;
 using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
@@ -23,17 +24,32 @@ public class PenumbraStatusView : IUiComponent {
     public void Draw() {
         var status = this.presenter.CurrentStatus;
 
-        // Render baseline metadata
+        DrawBaselineMetadata(status);
+        DrawSeparator();
+
+        DrawStatisticsFunnel(status);
+        DrawSeparator();
+
+        DrawCollectionHierarchy(status);
+        DrawSeparator();
+
+        DrawActionButtons(status);
+
+        // Execute drawing routines for injected sub-windows
+        this.modScannerWindow.Draw();
+        this.conflictListWindow.Draw(status.ConflictingMods);
+    }
+
+    // Renders the top-level integration and connection state
+    private void DrawBaselineMetadata(PenumbraStatusResult status) {
         ImGui.Text($"Statut de l'intégration : {(status.IsEnabled ? "Actif" : "Inactif")}");
         ImGui.Text($"Personnage connecté : {(string.IsNullOrEmpty(status.PlayerName) ? "Aucun" : status.PlayerName)}");
+    }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
+    // Renders the absolute baseline and the nested progress bar tiers
+    private void DrawStatisticsFunnel(PenumbraStatusResult status) {
         ImGui.Text("Analyse de la répartition des mods :");
 
-        // Explicitly display the absolute baseline before the funnel charts
         ImGui.Text($"Total des mods installés (IPC) : {status.ModCount}");
         ImGui.Spacing();
 
@@ -61,27 +77,28 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, new Vector4(1.0f, 0.4f, 0.0f, 1.0f)); // Alert Orange
         ImGui.ProgressBar(conflictRatio, new Vector2(-1, 16), $"{(conflictRatio * 100):0.0}% des mods actifs");
         ImGui.PopStyleColor();
+    }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
+    // Renders the inheritance tree for the currently loaded character
+    private void DrawCollectionHierarchy(PenumbraStatusResult status) {
         ImGui.Text("Hiérarchie des collections actives :");
+
         if (status.ActiveCollections == null || status.ActiveCollections.Count == 0) {
             ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1f), "  Aucune collection active détectée.");
-        } else {
-            int visualIndex = 0;
-            for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
-                string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
-                ImGui.Text($"{prefix}{status.ActiveCollections[i]}");
-                visualIndex++;
-            }
+            return;
         }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        int visualIndex = 0;
+        // Iterate backwards to display the active root collection first
+        for (int i = status.ActiveCollections.Count - 1; i >= 0; i--) {
+            string prefix = visualIndex == 0 ? "  [Active] " : "  └── [Hérité] ";
+            ImGui.Text($"{prefix}{status.ActiveCollections[i]}");
+            visualIndex++;
+        }
+    }
 
+    // Renders triggers for state updates and modal windows
+    private void DrawActionButtons(PenumbraStatusResult status) {
         if (ImGui.Button("Rafraîchir le rapport global")) {
             this.presenter.RefreshReport();
         }
@@ -98,9 +115,12 @@ public class PenumbraStatusView : IUiComponent {
                 this.conflictListWindow.Open();
             }
         }
+    }
 
-        this.modScannerWindow.Draw();
-
-        this.conflictListWindow.Draw(status.ConflictingMods);
+    // Utility for consistent visual separation
+    private void DrawSeparator() {
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
     }
 }
