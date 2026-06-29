@@ -26,9 +26,12 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.Spacing();
 
         ImGui.Text("Analyse de la répartition des mods :");
+
+        // Explicitly display the absolute baseline before the funnel charts
+        ImGui.Text($"Total des mods installés (IPC) : {status.ModCount}");
         ImGui.Spacing();
 
-        // Tier 1: Configured mods inside the active collection lineage relative to overall installed mods (IPC)
+        // Tier 1: Configured mods inside the active collection lineage relative to overall installed mods
         float collectionRatio = status.ModCount > 0 ? (float)status.CollectionTotalMods / status.ModCount : 0f;
         ImGui.Text($"Mods configurés dans vos collections : {status.CollectionTotalMods} / {status.ModCount}");
         ImGui.PushStyleColor(ImGuiCol.PlotHistogram, new Vector4(0.2f, 0.6f, 1.0f, 1.0f)); // Professional Blue
