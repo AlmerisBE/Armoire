@@ -12,7 +12,7 @@ public class LocalizationService : ILocalizationService {
 
     public LocalizationService(IRuntimeEnvironment runtime) {
         this.currentLanguage = runtime.GetClientLanguage();
-        this.localesDirectory = Path.Combine(runtime.GetPluginDirectory(), "Locales");
+        this.localesDirectory = Path.Combine(runtime.GetPluginDirectory(), "Data", "Locales");
         this.currentTranslations = new Dictionary<string, string>();
 
         LoadLanguage(this.currentLanguage);

@@ -103,12 +103,13 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
             var ipcList = this.getModListSubscriber.Invoke();
             if (ipcList != null) {
                 foreach (var kvp in ipcList) {
-                    // Key = Directory Name, Value = Human Readable Name
                     result[kvp.Key] = kvp.Value;
                 }
+            } else {
+                this.pluginLog.Error("[PenumbraClient] Penumbra IPC returned null for mod list. (Crash or timeout)");
             }
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, "[PenumbraClient] Failed to fetch raw mod list from IPC.");
+            this.pluginLog.Error(ex, "[PenumbraClient] Fatal error while processing raw mod list.");
         }
 
         return result;

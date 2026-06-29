@@ -20,7 +20,8 @@ public static class ServiceConfigurator {
         ICommandManager commandManager,
         IObjectTable objectTable,
         IFramework framework,
-        INotificationManager notificationManager) {
+        INotificationManager notificationManager,
+        IClientState clientState) {
         var services = new ServiceCollection();
 
         // 1. Dalamud native services
@@ -30,6 +31,7 @@ public static class ServiceConfigurator {
         services.AddSingleton(objectTable);
         services.AddSingleton(framework);
         services.AddSingleton(notificationManager);
+        services.AddSingleton(clientState);
 
         // 2. Core services
         services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();

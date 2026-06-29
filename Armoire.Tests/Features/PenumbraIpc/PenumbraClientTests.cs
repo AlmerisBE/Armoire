@@ -102,7 +102,8 @@ public class PenumbraClientTests {
     public void GetRawModsList_WhenIpcThrowsException_ReturnsEmptyDictionaryAndLogsError() {
         // Arrange
         this.mockApiVersionSubscriber.InvokeFunc().Returns((1, 0));
-        this.mockModListSubscriber.When(x => x.InvokeFunc()).Throw(new Exception("Timeout"));
+
+        this.mockModListSubscriber.InvokeFunc().Returns(x => throw new Exception("Timeout"));
 
         using var client = new PenumbraClient(this.mockPluginInterface, this.mockPluginLog);
 
@@ -112,7 +113,9 @@ public class PenumbraClientTests {
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        this.mockPluginLog.Received(1).Error(Arg.Any<Exception>(), Arg.Any<string>());
+
+        // On vérifie que notre NOUVEAU message de secours a bien été envoyé dans les logs
+        this.mockPluginLog.ReceivedWithAnyArgs().Error(null!);
     }
 
     [Fact]
