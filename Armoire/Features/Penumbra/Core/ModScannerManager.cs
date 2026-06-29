@@ -18,18 +18,16 @@ public class ModScannerManager : IModScannerManager, IDisposable {
     private readonly IPluginLog pluginLog;
     private readonly INotificationManager notificationManager;
 
-    // THREAD-SAFE CACHE: Allows UI to read while the FileSystemWatcher writes
-    private ConcurrentDictionary<string, ArmoireModCacheEntry> modCache = new();
+    private ConcurrentDictionary<string, ArmoireModCacheEntry> modCache = new(StringComparer.OrdinalIgnoreCase);
     private FileSystemWatcher? watcher;
 
     private int totalMods = 0;
     private int processedMods = 0;
     private int errorCount = 0;
 
-    // Thread control mechanisms
     private CancellationTokenSource? cancellationTokenSource;
     private readonly ManualResetEventSlim pauseEvent = new(true);
-    private Dictionary<string, string> modsToScan = new();
+    private Dictionary<string, string> modsToScan = new(StringComparer.OrdinalIgnoreCase);
 
     public ScanState State { get; private set; } = ScanState.Idle;
     public int TotalMods => this.totalMods;
@@ -37,6 +35,8 @@ public class ModScannerManager : IModScannerManager, IDisposable {
     public int ErrorCount => this.errorCount;
 
     public IReadOnlyDictionary<string, ArmoireModCacheEntry> ModCache => this.modCache;
+
+    public event Action? OnCacheUpdated;
 
     public ModScannerManager(IPenumbraClient penumbraClient, IPluginLog pluginLog, INotificationManager notificationManager) {
         this.penumbraClient = penumbraClient;
@@ -88,24 +88,28 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 };
 
+                var newCache = new ConcurrentDictionary<string, ArmoireModCacheEntry>(StringComparer.OrdinalIgnoreCase);
+
                 Parallel.ForEach(this.modsToScan, parallelOptions, kvp => {
                     this.pauseEvent.Wait(token);
-
                     var entry = ProcessSingleMod(modDirectory, kvp.Key, kvp.Value, jsonOptions);
 
                     if (entry != null) {
-                        this.modCache[kvp.Key] = entry;
+                        newCache[kvp.Key] = entry;
                     } else {
                         Interlocked.Increment(ref this.errorCount);
                     }
 
                     Interlocked.Increment(ref this.processedMods);
                 });
+
+                this.modCache = newCache;
             }, token);
 
             SendNotification("Scan Complete", $"Successfully scanned {this.ProcessedMods} mods. Errors: {this.ErrorCount}", NotificationType.Success);
 
-            // Activate real-time monitoring once the baseline cache is built
+            this.OnCacheUpdated?.Invoke();
+
             EnableRealTimeMonitoring();
 
         } catch (OperationCanceledException) {
@@ -120,7 +124,6 @@ public class ModScannerManager : IModScannerManager, IDisposable {
         }
     }
 
-    // Centralized logic to parse a single mod (used by full scan and watcher)
     private ArmoireModCacheEntry? ProcessSingleMod(string rootDir, string dirName, string fallbackName, JsonSerializerOptions options) {
         var fullDirPath = Path.Combine(rootDir, dirName);
         if (!Directory.Exists(fullDirPath)) {
@@ -140,13 +143,13 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                     foreach (var path in defaultData.Files.Keys) {
                         entry.ModifiedGamePaths.Add(path);
                     }
+
                     foreach (var path in defaultData.FileSwaps.Keys) {
                         entry.ModifiedGamePaths.Add(path);
                     }
                 }
             }
 
-            // If watcher triggers this without IPC data, try to read meta.json for the human name
             if (string.IsNullOrEmpty(fallbackName)) {
                 var metaPath = Path.Combine(fullDirPath, "meta.json");
                 if (File.Exists(metaPath)) {
@@ -156,10 +159,9 @@ public class ModScannerManager : IModScannerManager, IDisposable {
                     }
                 }
             }
-
             return entry;
         } catch {
-            return null; // Suppress transient read errors
+            return null;
         }
     }
 
@@ -175,7 +177,7 @@ public class ModScannerManager : IModScannerManager, IDisposable {
 
         this.watcher = new FileSystemWatcher(modDirectory) {
             NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite,
-            IncludeSubdirectories = true, // Must watch subdirectories to catch meta.json/default_mod.json changes
+            IncludeSubdirectories = true,
             EnableRaisingEvents = true
         };
 
@@ -183,14 +185,9 @@ public class ModScannerManager : IModScannerManager, IDisposable {
         this.watcher.Created += OnModFileSystemChanged;
         this.watcher.Deleted += OnModFileSystemChanged;
         this.watcher.Renamed += OnModFileSystemRenamed;
-
-        this.pluginLog.Info("[ModScannerManager] Real-time filesystem monitoring enabled.");
     }
 
-    private void OnModFileSystemChanged(object sender, FileSystemEventArgs e) {
-        HandleFileSystemEvent(e.FullPath, e.ChangeType);
-    }
-
+    private void OnModFileSystemChanged(object sender, FileSystemEventArgs e) => HandleFileSystemEvent(e.FullPath, e.ChangeType);
     private void OnModFileSystemRenamed(object sender, RenamedEventArgs e) {
         HandleFileSystemEvent(e.OldFullPath, WatcherChangeTypes.Deleted);
         HandleFileSystemEvent(e.FullPath, WatcherChangeTypes.Created);
@@ -213,68 +210,39 @@ public class ModScannerManager : IModScannerManager, IDisposable {
             return;
         }
 
-        // Debounce/Execute the update in a background thread to prevent UI freezing or file locks
         _ = Task.Run(() => {
             try {
                 if (changeType == WatcherChangeTypes.Deleted && !Directory.Exists(Path.Combine(modDirectory, dirName))) {
-                    this.modCache.TryRemove(dirName, out _);
-                    this.pluginLog.Debug($"[ModScannerManager] Mod removed from cache: {dirName}");
+                    if (this.modCache.TryRemove(dirName, out _)) {
+                        this.OnCacheUpdated?.Invoke();
+                    }
                 } else {
-                    // Slight delay to allow Penumbra or OS to release file locks after a write/creation
                     Thread.Sleep(200);
                     var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                     var newEntry = ProcessSingleMod(modDirectory, dirName, string.Empty, jsonOptions);
 
                     if (newEntry != null) {
                         this.modCache[dirName] = newEntry;
-                        this.pluginLog.Debug($"[ModScannerManager] Mod updated in cache: {newEntry.ModName}");
+                        this.OnCacheUpdated?.Invoke();
                     }
                 }
-            } catch {
-                // Ignore transient background update errors
-            }
+            } catch { /* Ignore */ }
         });
     }
 
-    public void PauseScan() {
-        if (this.State == ScanState.Scanning) {
-            this.pauseEvent.Reset();
-            this.State = ScanState.Paused;
-        }
-    }
-
-    public void ResumeScan() {
-        if (this.State == ScanState.Paused) {
-            this.pauseEvent.Set();
-            this.State = ScanState.Scanning;
-        }
-    }
-
+    public void PauseScan() { if (this.State == ScanState.Scanning) { this.pauseEvent.Reset(); this.State = ScanState.Paused; } }
+    public void ResumeScan() { if (this.State == ScanState.Paused) { this.pauseEvent.Set(); this.State = ScanState.Scanning; } }
     public void CancelScan() {
         if (this.State != ScanState.Idle) {
             this.cancellationTokenSource?.Cancel();
         }
     }
-
-    private void ResetState() {
-        this.State = ScanState.Idle;
-        this.cancellationTokenSource?.Dispose();
-        this.cancellationTokenSource = null;
-    }
-
-    private void SendNotification(string title, string content, NotificationType type) {
-        this.notificationManager.AddNotification(new Notification {
-            Title = title,
-            Content = content,
-            Type = type,
-            Minimized = false
-        });
-    }
+    private void ResetState() { this.State = ScanState.Idle; this.cancellationTokenSource?.Dispose(); this.cancellationTokenSource = null; }
+    private void SendNotification(string title, string content, NotificationType type) => this.notificationManager.AddNotification(new Notification { Title = title, Content = content, Type = type });
 
     public void Dispose() {
         CancelScan();
         this.pauseEvent.Dispose();
-
         if (this.watcher != null) {
             this.watcher.EnableRaisingEvents = false;
             this.watcher.Changed -= OnModFileSystemChanged;

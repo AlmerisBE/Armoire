@@ -19,6 +19,7 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.Text($"Statut de l'intégration : {(status.IsEnabled ? "Actif" : "Inactif")}");
         ImGui.Text($"Personnage connecté : {(string.IsNullOrEmpty(status.PlayerName) ? "Aucun" : status.PlayerName)}");
         ImGui.Text($"Nombre de mods détectés par l'IPC : {status.ModCount}");
+
         ImGui.Text($"Mods actifs en conflit (surchargés) : {status.ConflictModCount}");
 
         ImGui.Spacing();

@@ -118,6 +118,14 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                                     mod.Priority = priority;
                                 }
 
+                                if (modData.TryGetProperty("Settings", out var modOptionsProp) && modOptionsProp.ValueKind == JsonValueKind.Object) {
+                                    foreach (var optionGroup in modOptionsProp.EnumerateObject()) {
+                                        if (optionGroup.Value.TryGetUInt32(out uint optionValue)) {
+                                            mod.Settings[optionGroup.Name] = optionValue;
+                                        }
+                                    }
+                                }
+
                                 collection.LocalSettings[modId] = mod;
                             }
                         }
@@ -157,7 +165,8 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                     Name = localModData.Name,
                     IsEnabled = localModData.IsEnabled,
                     Priority = localModData.Priority,
-                    SourceCollectionName = collection.Name
+                    SourceCollectionName = collection.Name,
+                    Settings = new Dictionary<string, uint>(localModData.Settings, StringComparer.OrdinalIgnoreCase)
                 };
             }
         }

@@ -12,24 +12,33 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
     private readonly IPenumbraClient penumbraClient;
     private readonly IPenumbraRepository repository;
     private readonly IObjectTable objectTable;
+    private readonly IModScannerManager scannerManager;
 
     private string lastPlayerName = string.Empty;
     private int lastModCount = -1;
     private DateTime lastCheckTime = DateTime.MinValue;
     private bool pendingRefresh = false;
 
-    // Événement déclenché uniquement quand de nouvelles données sont prêtes
     public event Action<PenumbraStatusResult>? OnStatusUpdated;
 
-    public PenumbraSyncManager(IFramework framework, IPenumbraAnalyzer analyzer, IPenumbraClient penumbraClient, IPenumbraRepository repository, IObjectTable objectTable) {
+    public PenumbraSyncManager(
+        IFramework framework,
+        IPenumbraAnalyzer analyzer,
+        IPenumbraClient penumbraClient,
+        IPenumbraRepository repository,
+        IObjectTable objectTable,
+        IModScannerManager scannerManager) {
+
         this.framework = framework;
         this.analyzer = analyzer;
         this.penumbraClient = penumbraClient;
         this.repository = repository;
         this.objectTable = objectTable;
+        this.scannerManager = scannerManager;
 
-        // On s'abonne à la boucle principale du jeu
         this.framework.Update += OnFrameworkUpdate;
+
+        this.scannerManager.OnCacheUpdated += ForceRefresh;
     }
 
     private void OnFrameworkUpdate(IFramework fw) {
@@ -60,7 +69,7 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
 
             _ = Task.Run(async () => {
                 await this.repository.SyncDataAsync();
-                pendingRefresh = true; // Signal au thread principal
+                pendingRefresh = true;
             });
         }
     }
@@ -72,5 +81,6 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
 
     public void Dispose() {
         this.framework.Update -= OnFrameworkUpdate;
+        this.scannerManager.OnCacheUpdated -= ForceRefresh;
     }
 }

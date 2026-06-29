@@ -1,6 +1,7 @@
 ﻿namespace Armoire.Features.Penumbra.Interfaces;
 
 using Armoire.Features.Penumbra.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,11 +13,12 @@ public interface IModScannerManager {
 
     IReadOnlyDictionary<string, ArmoireModCacheEntry> ModCache { get; }
 
+    event Action? OnCacheUpdated;
+
     void InitializeScanProgress(int ipcModCount);
     Task StartScanAsync();
     void PauseScan();
     void ResumeScan();
     void CancelScan();
-
     void EnableRealTimeMonitoring();
 }
