@@ -103,40 +103,40 @@ public class ModDetailsWindow : IDisposable {
             ImGui.TableSetupColumn("LeftEquipment", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("RightEquipment", ImGuiTableColumnFlags.WidthStretch);
 
-            // Ligne 1 : Arme | Boucles d'oreilles
+            // Row 1: Main Weapon | Off-Hand
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("wpn", this.loc.GetString("Slot_MainHand"));
-            ImGui.TableNextColumn(); DrawSpecificSlot("ear", this.loc.GetString("Slot_Earrings"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("sub", this.loc.GetString("Slot_OffHand"));
 
-            // Ligne 2 : Tête | Collier
+            // Row 2: Head | Earrings
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("met", this.loc.GetString("Slot_Head"));
-            ImGui.TableNextColumn(); DrawSpecificSlot("nek", this.loc.GetString("Slot_Necklace"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("ear", this.loc.GetString("Slot_Earrings"));
 
-            // Ligne 3 : Corps | Bracelets
+            // Row 3: Body | Necklace
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("top", this.loc.GetString("Slot_Body"));
-            ImGui.TableNextColumn(); DrawSpecificSlot("wrs", this.loc.GetString("Slot_Bracelets"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("nek", this.loc.GetString("Slot_Necklace"));
 
-            // Ligne 4 : Mains | Bague
+            // Row 4: Hands | Bracelets
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("glv", this.loc.GetString("Slot_Hands"));
-            ImGui.TableNextColumn(); DrawSpecificSlot("rir", this.loc.GetString("Slot_Ring"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("wrs", this.loc.GetString("Slot_Bracelets"));
 
-            // Ligne 5 : Jambes | (Vide pour respecter l'alignement)
+            // Row 5: Legs | Ring (Right)
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("dwn", this.loc.GetString("Slot_Legs"));
-            ImGui.TableNextColumn();
+            ImGui.TableNextColumn(); DrawSpecificSlot("rir", this.loc.GetString("Slot_RingRight"));
 
-            // Ligne 6 : Pieds | (Vide pour respecter l'alignement)
+            // Row 6: Feet | Ring (Left)
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("sho", this.loc.GetString("Slot_Feet"));
-            ImGui.TableNextColumn();
+            ImGui.TableNextColumn(); DrawSpecificSlot("ril", this.loc.GetString("Slot_RingLeft"));
 
             ImGui.EndTable();
         }
 
-        // Éléments de customisation (Visage, Cheveux) et fichiers systèmes non-équipements
+        // Customization and System files
         ImGui.Spacing();
         DrawSpecificSlot("custom", "Customisation");
         DrawSpecificSlot("unknown", "Fichiers Système");
@@ -144,7 +144,7 @@ public class ModDetailsWindow : IDisposable {
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
         if (ImGui.Button("Réinitialiser le mod (Paramètres par défaut)")) {
-            // Action future : Restaurer le default_mod.json
+            // Future action
         }
     }
 

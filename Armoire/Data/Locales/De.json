@@ -71,5 +71,8 @@
   "Slot_Necklace": "Halskette",
   "Slot_Bracelets": "Armbänder",
   "Slot_Ring": "Ring",
-  "Slot_Unmodified": "Unverändert"
+  "Slot_Unmodified": "Unverändert",
+  "Slot_OffHand": "Schild/Nebenhand",
+  "Slot_RingRight": "Ring (Rechts)",
+  "Slot_RingLeft": "Ring (Links)"
 }

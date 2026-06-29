@@ -71,5 +71,8 @@
   "Slot_Necklace": "首飾り",
   "Slot_Bracelets": "腕輪",
   "Slot_Ring": "指輪",
-  "Slot_Unmodified": "変更なし"
+  "Slot_Unmodified": "変更なし",
+  "Slot_OffHand": "副武器",
+  "Slot_RingRight": "指輪 (右)",
+  "Slot_RingLeft": "指輪 (左)"
 }

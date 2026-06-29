@@ -71,5 +71,8 @@
   "Slot_Necklace": "Necklace",
   "Slot_Bracelets": "Bracelets",
   "Slot_Ring": "Ring",
-  "Slot_Unmodified": "Unmodified"
+  "Slot_Unmodified": "Unmodified",
+  "Slot_OffHand": "Off-hand",
+  "Slot_RingRight": "Ring (Right)",
+  "Slot_RingLeft": "Ring (Left)"
 }

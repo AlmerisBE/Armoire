@@ -71,5 +71,8 @@
   "Slot_Necklace": "Collier",
   "Slot_Bracelets": "Bracelets",
   "Slot_Ring": "Bague",
-  "Slot_Unmodified": "Non modifié"
+  "Slot_Unmodified": "Non modifié",
+  "Slot_OffHand": "Arme secondaire",
+  "Slot_RingRight": "Bague (Droite)",
+  "Slot_RingLeft": "Bague (Gauche)"
 }
