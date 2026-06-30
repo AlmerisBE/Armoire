@@ -29,21 +29,39 @@ public class ModSwapperService : IModSwapperService {
         this.config = config;
     }
 
-    public bool PerformSwap(string modId, string slotKey, string targetModelId) {
+    public bool PerformSwap(string modId, string slotKey, string targetModelId, string textureProviderModId = "") {
+        // 1. Frappe principale sur le mod de base
+        bool mainSwap = ExecuteSingleSwap(modId, slotKey, targetModelId);
+        bool texSwap = false;
+
+        // 2. Frappe secondaire sur le fournisseur de textures
+        if (!string.IsNullOrWhiteSpace(textureProviderModId)) {
+            this.pluginLog.Info($"[ModSwapper] Executing secondary texture inheritance swap for {textureProviderModId}");
+            texSwap = ExecuteSingleSwap(textureProviderModId, slotKey, targetModelId);
+        }
+
+        // 3. Rafraîchissement global une seule fois à la fin pour éviter les lags
+        if (mainSwap || texSwap) {
+            this.penumbraClient.RedrawAll();
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool ExecuteSingleSwap(string targetModId, string slotKey, string targetModelId) {
         string rootDir = this.penumbraClient.GetModDirectory();
         if (string.IsNullOrEmpty(rootDir)) {
             return false;
         }
 
-        string fullModPath = Path.Combine(rootDir, modId);
+        string fullModPath = Path.Combine(rootDir, targetModId);
         if (!Directory.Exists(fullModPath)) {
             return false;
         }
 
         try {
-            this.pluginLog.Info($"[ModSwapper] Starting Ultimate In-Place Swap for {modId} ({slotKey} -> {targetModelId})");
-
-            // We process EVERY json file to ensure all Penumbra Options are maintained
+            this.pluginLog.Info($"[ModSwapper] Patching {targetModId} ({slotKey} -> {targetModelId})");
             var jsonFiles = Directory.GetFiles(fullModPath, "*.json", SearchOption.TopDirectoryOnly);
             bool anyFilesChanged = false;
 
@@ -58,7 +76,6 @@ public class ModSwapperService : IModSwapperService {
                 var root = JToken.Parse(jsonContent);
 
                 if (RecurseAndReplace(root, slotKey, targetModelId, fullModPath)) {
-                    // Create backup only if changes were made and no backup exists
                     if (!File.Exists(backupPath)) {
                         File.Copy(configFile, backupPath);
                     }
@@ -69,28 +86,14 @@ public class ModSwapperService : IModSwapperService {
             }
 
             if (anyFilesChanged) {
-                // --- MEMORY PERSISTENCE ---
-                // Record the modification in our configuration file
-                if (!this.config.ModifiedMods.TryGetValue(modId, out var modEntry)) {
-                    // Fetch the real mod name from the scanner cache, fallback to directory name if not found
-                    string modName = this.scannerManager.ModCache.TryGetValue(modId, out var cache) ? cache.ModName : modId;
-
-                    modEntry = new ModifiedModEntry { ModName = modName };
-                    this.config.ModifiedMods[modId] = modEntry;
-                }
-
-                // Add or update the swapped slot
-                modEntry.Swaps[slotKey] = targetModelId;
-                this.config.Save();
-
-                this.penumbraClient.ReloadMod(modId);
-                this.penumbraClient.RedrawAll();
+                // On recharge le mod spécifique dans Penumbra pour qu'il capte les nouveaux fichiers
+                this.penumbraClient.ReloadMod(targetModId);
                 return true;
             }
 
             return false;
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, $"[ModSwapper] Failed to perform swap for mod {modId}");
+            this.pluginLog.Error(ex, $"[ModSwapper] Failed to perform swap for mod {targetModId}");
             return false;
         }
     }

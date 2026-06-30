@@ -8,6 +8,7 @@ using Armoire.Features.ModDetails.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions; // Ajout nécessaire pour la Regex
 
 public interface IModDetailsResolver {
     DetailedModState? ResolveModDetails(string modId, EffectiveCollectionState currentState);
@@ -17,6 +18,9 @@ public class ModDetailsResolver : IModDetailsResolver {
     private readonly IModScannerManager scannerManager;
     private readonly IGameDataService gameDataService;
     private readonly ILocalizationService loc;
+
+    // Expression régulière pour extraire l'ID du modèle (ex: e0521, w0101)
+    private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public ModDetailsResolver(IModScannerManager scannerManager, IGameDataService gameDataService, ILocalizationService loc) {
         this.scannerManager = scannerManager;
@@ -52,6 +56,7 @@ public class ModDetailsResolver : IModDetailsResolver {
 
         foreach (var path in targetPaths) {
             var resolvedData = this.gameDataService.ResolveItem(path);
+
             var slotState = new DetailedSlotState {
                 AffectedPaths = new List<string> { path },
                 LocalizedItemName = resolvedData.Name,
@@ -63,9 +68,9 @@ public class ModDetailsResolver : IModDetailsResolver {
             foreach (var enemy in higherPriorityMods) {
                 if (this.scannerManager.ModCache.TryGetValue(enemy.Id, out var enemyCache)) {
                     var enemyPaths = GetActivePathsForMod(enemyCache, enemy.Settings);
+
                     if (enemyPaths.Contains(path, StringComparer.OrdinalIgnoreCase)) {
                         slotState.IsConflicting = true;
-
                         string priorityStr = string.Format(this.loc.GetString("ModDetails_PriorityLabel"), enemy.Priority);
                         slotState.OverwrittenByMods.Add($"{enemy.Name}{priorityStr}");
                         break;
@@ -78,15 +83,59 @@ public class ModDetailsResolver : IModDetailsResolver {
 
         // 2. Group slots by LocalizedItemName, IsConflicting, and the exact winners
         result.ReplacedSlots = rawSlots
-            .GroupBy(s => new { s.LocalizedItemName, s.IsConflicting, Winners = string.Join(",", s.OverwrittenByMods), s.IconId, s.SlotCategory }) // NOUVEAU
-            .Select(g => new DetailedSlotState {
-                LocalizedItemName = g.Key.LocalizedItemName,
-                IconId = g.Key.IconId,
-                ItemId = g.First().ItemId,
-                SlotCategory = g.Key.SlotCategory,
-                IsConflicting = g.Key.IsConflicting,
-                OverwrittenByMods = g.First().OverwrittenByMods,
-                AffectedPaths = g.SelectMany(x => x.AffectedPaths).Distinct().ToList()
+            .GroupBy(s => new { s.LocalizedItemName, s.IsConflicting, Winners = string.Join(",", s.OverwrittenByMods), s.IconId, s.SlotCategory })
+            .Select(g => {
+                var paths = g.SelectMany(x => x.AffectedPaths).Distinct().ToList();
+
+                // --- LOGIQUE DE DÉTECTION D'HÉRITAGE DE TEXTURES ---
+                bool hasMdl = paths.Any(p => p.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase));
+                bool hasTex = paths.Any(p => p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase));
+                bool isMissingTextures = hasMdl && !hasTex;
+
+                var slotState = new DetailedSlotState {
+                    LocalizedItemName = g.Key.LocalizedItemName,
+                    IconId = g.Key.IconId,
+                    ItemId = g.First().ItemId,
+                    SlotCategory = g.Key.SlotCategory,
+                    IsConflicting = g.Key.IsConflicting,
+                    OverwrittenByMods = g.First().OverwrittenByMods,
+                    AffectedPaths = paths,
+                    IsMissingTextures = isMissingTextures
+                };
+
+                // Si le mod est incomplet, on cherche les fournisseurs potentiels
+                if (isMissingTextures) {
+                    var modelIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var p in paths) {
+                        var match = this.modelIdRegex.Match(p);
+                        if (match.Success) {
+                            modelIds.Add(match.Value);
+                        }
+                    }
+
+                    // Parcourir tous les autres mods actifs de la collection
+                    foreach (var otherMod in currentState.EffectiveMods.Values) {
+                        if (!otherMod.IsEnabled || otherMod.Id == modId) {
+                            continue;
+                        }
+
+                        if (this.scannerManager.ModCache.TryGetValue(otherMod.Id, out var otherCache)) {
+                            var otherPaths = GetActivePathsForMod(otherCache, otherMod.Settings);
+
+                            // Un mod est un fournisseur s'il contient un .mtrl ou .tex qui mentionne le même Model ID (ex: e0521)
+                            bool providesTexture = otherPaths.Any(p =>
+                                (p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)) &&
+                                modelIds.Any(mId => p.Contains(mId, StringComparison.OrdinalIgnoreCase))
+                            );
+
+                            if (providesTexture) {
+                                slotState.AvailableTextureProviders[otherMod.Id] = otherMod.Name;
+                            }
+                        }
+                    }
+                }
+
+                return slotState;
             })
             .OrderByDescending(s => s.IsConflicting)
             .ThenBy(s => s.LocalizedItemName)
@@ -97,8 +146,10 @@ public class ModDetailsResolver : IModDetailsResolver {
 
     private HashSet<string> GetActivePathsForMod(Armoire.Features.LocalScanner.Models.ArmoireModCacheEntry cache, Dictionary<string, uint> userSettings) {
         var paths = new HashSet<string>(cache.ModifiedGamePaths, StringComparer.OrdinalIgnoreCase);
+
         foreach (var kvp in cache.OptionGroups) {
             uint setting = userSettings.TryGetValue(kvp.Key, out var val) ? val : 0;
+
             if (kvp.Value.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase)) {
                 for (int i = 0; i < kvp.Value.OptionPaths.Count; i++) {
                     if ((setting & (1u << i)) != 0) {

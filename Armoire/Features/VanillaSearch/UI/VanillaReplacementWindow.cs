@@ -23,6 +23,7 @@ public class VanillaReplacementWindow {
     public bool IsVisible { get; set; } = false;
     private string currentSlotKey = string.Empty;
     private string currentModId = string.Empty;
+    private string currentTextureProviderId = string.Empty; // <-- NOUVEAU
 
     // 3 distinct search inputs
     private string searchName = string.Empty;
@@ -40,9 +41,11 @@ public class VanillaReplacementWindow {
         this.glamourerClient = glamourerClient;
     }
 
-    public void Open(string slotKey, string modId, EffectiveCollectionState globalState) {
+    // <-- NOUVEAU PARAMÈTRE OPTIONNEL
+    public void Open(string slotKey, string modId, EffectiveCollectionState globalState, string textureProviderId = "") {
         this.currentSlotKey = slotKey;
         this.currentModId = modId;
+        this.currentTextureProviderId = textureProviderId; // Sauvegarde du choix
         this.lastGlobalState = globalState;
 
         // Reset all filters when opening the window
@@ -68,13 +71,9 @@ public class VanillaReplacementWindow {
                 this.IsVisible = false;
             }
 
-            // --- Multi-Criteria Search Filters ---
-
-            // 1. Name Filter (Full Width)
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
             ImGui.InputTextWithHint("##SearchName", this.loc.GetString("UI_VanillaWindow_SearchName"), ref this.searchName, 128);
 
-            // 2. Expansion and Origin Filters (Half Width each, side-by-side)
             float halfWidth = (ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X) / 2f;
 
             ImGui.SetNextItemWidth(halfWidth);
@@ -87,14 +86,12 @@ public class VanillaReplacementWindow {
 
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
-            // --- Apply Filters (AND logic) ---
             var filteredItems = this.availableItems.Where(i =>
                 (string.IsNullOrWhiteSpace(this.searchName) || i.Name.Contains(this.searchName, StringComparison.OrdinalIgnoreCase)) &&
                 (string.IsNullOrWhiteSpace(this.searchExpansion) || i.ExpansionName.Contains(this.searchExpansion, StringComparison.OrdinalIgnoreCase)) &&
                 (string.IsNullOrWhiteSpace(this.searchOrigin) || i.Origin.Contains(this.searchOrigin, StringComparison.OrdinalIgnoreCase))
             ).ToList();
 
-            // --- Draw List ---
             if (ImGui.BeginChild("VanillaItemsList", new Vector2(0, 0), true)) {
                 if (!filteredItems.Any()) {
                     ImGui.Spacing();
@@ -104,7 +101,6 @@ public class VanillaReplacementWindow {
                 foreach (var item in filteredItems) {
                     ImGui.PushID($"vanilla_{item.ItemId}");
 
-                    // 1. Draw Item Icon
                     if (item.IconId > 0) {
                         var iconWrap = this.textureProvider.GetFromGameIcon(new GameIconLookup(item.IconId)).GetWrapOrDefault();
                         if (iconWrap != null) {
@@ -113,7 +109,6 @@ public class VanillaReplacementWindow {
                         }
                     }
 
-                    // 2. Draw Metadata Block
                     Vector2 textPos = ImGui.GetCursorPos();
                     ImGui.SetCursorPos(new Vector2(textPos.X, textPos.Y + 2));
                     ImGui.TextUnformatted(item.Name);
@@ -121,7 +116,6 @@ public class VanillaReplacementWindow {
                     ImGui.SetCursorPos(new Vector2(textPos.X, textPos.Y + 18));
                     ImGui.TextDisabled($"{item.ExpansionName} | {item.Origin}");
 
-                    // 3. Draw Selection Button aligned to the right side
                     ImGui.SameLine(ImGui.GetWindowWidth() - 90);
                     ImGui.SetCursorPosY(textPos.Y + 6);
 
@@ -136,7 +130,8 @@ public class VanillaReplacementWindow {
                     }
 
                     if (ImGui.Button(this.loc.GetString("UI_VanillaWindow_BtnChoose"))) {
-                        bool success = this.swapperService.PerformSwap(this.currentModId, this.currentSlotKey, item.ModelId);
+                        // <-- TRANSMISSION AU SWAPPER DE LA DOUBLE FRAPPE
+                        bool success = this.swapperService.PerformSwap(this.currentModId, this.currentSlotKey, item.ModelId, this.currentTextureProviderId);
                         this.IsVisible = false;
                     }
 

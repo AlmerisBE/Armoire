@@ -8,7 +8,8 @@ public interface IModSwapperService {
     /// <param name="modId">The unique ID of the mod to modify.</param>
     /// <param name="slotKey">The slot being swapped (e.g., "top", "met").</param>
     /// <param name="targetModelId">The new vanilla model ID to target (e.g., "e0500").</param>
-    bool PerformSwap(string modId, string slotKey, string targetModelId);
+    /// <param name="textureProviderModId">Optional. A secondary mod ID to patch simultaneously for texture inheritance.</param>
+    bool PerformSwap(string modId, string slotKey, string targetModelId, string textureProviderModId = "");
 
     /// <summary>
     /// Restores the mod to its original state by removing all generated swaps.

@@ -172,25 +172,30 @@ public class ModDetailsWindow : IDisposable {
                 s.IconId,
                 BaseName = s.LocalizedItemName.Split('[')[0].Trim()
             })
-            .Select(g => new {
-                IconId = g.Key.IconId,
-                BaseName = g.Key.BaseName,
-                ItemId = g.First().ItemId,
-                IsConflicting = g.Any(x => x.IsConflicting),
-                OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList()
+            .Select(g => {
+                var first = g.First();
+                return new {
+                    IconId = g.Key.IconId,
+                    BaseName = g.Key.BaseName,
+                    ItemId = first.ItemId,
+                    IsConflicting = g.Any(x => x.IsConflicting),
+                    OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList(),
+                    // --- NOUVELLES PROPRIÉTÉS ---
+                    IsMissingTextures = g.Any(x => x.IsMissingTextures),
+                    AvailableTextureProviders = first.AvailableTextureProviders,
+                    OriginalRef = first // Permet de conserver et modifier l'état (SelectedTextureProviderId)
+                };
             })
             .ToList();
 
         // CAS 1 : Aucun fichier du mod ne modifie cet emplacement
         if (!itemsInSlot.Any()) {
-            // On ne dessine pas les lignes vides pour les catégories spéciales (custom, unknown)
             if (slotKey == "custom" || slotKey == "unknown") {
                 return;
             }
 
             ImGui.PushID($"empty_{slotKey}");
 
-            // Dessin d'un faux "Slot" vide façon FFXIV (Carré semi-transparent avec bordure)
             Vector2 p = ImGui.GetCursorScreenPos();
             ImGui.GetWindowDrawList().AddRectFilled(p, p + new Vector2(40, 40), ImGui.ColorConvertFloat4ToU32(new Vector4(0.1f, 0.1f, 0.1f, 0.5f)), 4f);
             ImGui.GetWindowDrawList().AddRect(p, p + new Vector2(40, 40), ImGui.ColorConvertFloat4ToU32(new Vector4(0.3f, 0.3f, 0.3f, 1f)), 4f);
@@ -210,7 +215,7 @@ public class ModDetailsWindow : IDisposable {
             return;
         }
 
-        // CAS 2 : Le mod modifie cet emplacement (On dessine les objets)
+        // CAS 2 : Le mod modifie cet emplacement
         foreach (var item in itemsInSlot) {
             ImGui.PushID(item.BaseName + item.IconId);
 
@@ -251,6 +256,7 @@ public class ModDetailsWindow : IDisposable {
             }
             ImGui.EndGroup();
 
+            // Menu contextuel (Glamourer)
             if (item.ItemId > 0 && ImGui.BeginPopupContextItem($"mod_ctx_{item.BaseName}_{item.IconId}")) {
                 if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
                     this.glamourerClient.EquipItem(item.ItemId, slotKey);
@@ -261,8 +267,190 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.SetTooltip("Clic-droit pour plus d'options");
             }
 
-            if (ImGui.IsItemClicked() && this.currentGlobalState != null && this.currentState != null) {
-                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);
+            // Gestion du clic pour remplacer l'objet
+            if (selected && this.currentGlobalState != null && this.currentState != null) {
+                // ATTENTION : On ajoute le paramètre SelectedTextureProviderId ici
+                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState, item.OriginalRef.SelectedTextureProviderId);
+            }
+
+            // --- NOUVEAU : UI d'héritage de textures ---
+            if (item.IsMissingTextures) {
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indentation pour s'aligner avec le texte (après l'icône)
+                ImGui.BeginGroup();
+
+                ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), this.loc.GetString("ModDetails_MissingTexturesWarning"));
+
+                // Détermine le texte à afficher dans la combo box
+                string previewValue = string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId)
+                    ? this.loc.GetString("ModDetails_SelectProvider")
+                    : (item.AvailableTextureProviders.TryGetValue(item.OriginalRef.SelectedTextureProviderId, out var pName) ? pName : "Inconnu");
+
+                ImGui.SetNextItemWidth(300f);
+                if (ImGui.BeginCombo($"##combo_tex_{item.BaseName}", previewValue)) {
+                    // Option pour désélectionner (Aucun héritage)
+                    if (ImGui.Selectable(this.loc.GetString("ModDetails_NoProvider"), string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId))) {
+                        item.OriginalRef.SelectedTextureProviderId = string.Empty;
+                    }
+
+                    // Liste des mods capables de fournir les textures pour cet objet
+                    foreach (var provider in item.AvailableTextureProviders) {
+                        bool isSelected = item.OriginalRef.SelectedTextureProviderId == provider.Key;
+                        if (ImGui.Selectable(provider.Value, isSelected)) {
+                            item.OriginalRef.SelectedTextureProviderId = provider.Key; // Sauvegarde du choix
+                        }
+                        if (isSelected) {
+                            ImGui.SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+                ImGui.EndGroup();
+            }
+
+            ImGui.PopID();
+            ImGui.Spacing();
+        }
+    }
+    private void DrawSpecificSlot(string slotKey, string slotDisplayName) {
+        var itemsInSlot = this.currentState!.ReplacedSlots
+            .Where(s => s.SlotCategory == slotKey)
+            .GroupBy(s => new {
+                s.IconId,
+                BaseName = s.LocalizedItemName.Split('[')[0].Trim()
+            })
+            .Select(g => {
+                var first = g.First();
+                return new {
+                    IconId = g.Key.IconId,
+                    BaseName = g.Key.BaseName,
+                    ItemId = first.ItemId,
+                    IsConflicting = g.Any(x => x.IsConflicting),
+                    OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList(),
+                    // --- NOUVELLES PROPRIÉTÉS ---
+                    IsMissingTextures = g.Any(x => x.IsMissingTextures),
+                    AvailableTextureProviders = first.AvailableTextureProviders,
+                    OriginalRef = first // Permet de conserver et modifier l'état (SelectedTextureProviderId)
+                };
+            })
+            .ToList();
+
+        // CAS 1 : Aucun fichier du mod ne modifie cet emplacement
+        if (!itemsInSlot.Any()) {
+            if (slotKey == "custom" || slotKey == "unknown") {
+                return;
+            }
+
+            ImGui.PushID($"empty_{slotKey}");
+
+            Vector2 p = ImGui.GetCursorScreenPos();
+            ImGui.GetWindowDrawList().AddRectFilled(p, p + new Vector2(40, 40), ImGui.ColorConvertFloat4ToU32(new Vector4(0.1f, 0.1f, 0.1f, 0.5f)), 4f);
+            ImGui.GetWindowDrawList().AddRect(p, p + new Vector2(40, 40), ImGui.ColorConvertFloat4ToU32(new Vector4(0.3f, 0.3f, 0.3f, 1f)), 4f);
+            ImGui.Dummy(new Vector2(40, 40));
+
+            ImGui.SameLine();
+            Vector2 cursorPos = ImGui.GetCursorPos();
+
+            ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 4));
+            ImGui.TextDisabled(slotDisplayName);
+
+            ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
+            ImGui.TextDisabled($"({this.loc.GetString("Slot_Unmodified")})");
+
+            ImGui.PopID();
+            ImGui.Spacing();
+            return;
+        }
+
+        // CAS 2 : Le mod modifie cet emplacement
+        foreach (var item in itemsInSlot) {
+            ImGui.PushID(item.BaseName + item.IconId);
+
+            ImGui.BeginGroup();
+            if (item.IconId > 0) {
+                var iconWrap = this.textureProvider.GetFromGameIcon(new GameIconLookup(item.IconId)).GetWrapOrDefault();
+                if (iconWrap != null) {
+                    ImGui.Image(iconWrap.Handle, new Vector2(40, 40));
+                } else {
+                    ImGui.Dummy(new Vector2(40, 40));
+                }
+            } else {
+                ImGui.Dummy(new Vector2(40, 40));
+            }
+
+            ImGui.SameLine();
+            Vector2 cursorPos = ImGui.GetCursorPos();
+
+            if (item.IsConflicting) {
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1, 0.4f, 0.4f, 1));
+            }
+
+            bool selected = ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40));
+
+            if (item.IsConflicting) {
+                ImGui.PopStyleColor();
+            }
+
+            ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 4));
+            ImGui.TextUnformatted(item.BaseName);
+
+            if (item.IsConflicting) {
+                ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
+                ImGui.TextDisabled($"(En conflit avec : {string.Join(", ", item.OverwrittenByMods)})");
+            } else {
+                ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
+                ImGui.TextColored(new Vector4(0.4f, 1, 0.4f, 1), "(Actif et appliqué)");
+            }
+            ImGui.EndGroup();
+
+            // Menu contextuel (Glamourer)
+            if (item.ItemId > 0 && ImGui.BeginPopupContextItem($"mod_ctx_{item.BaseName}_{item.IconId}")) {
+                if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
+                    this.glamourerClient.EquipItem(item.ItemId, slotKey);
+                }
+                ImGui.EndPopup();
+            }
+            if (ImGui.IsItemHovered()) {
+                ImGui.SetTooltip("Clic-droit pour plus d'options");
+            }
+
+            // Gestion du clic pour remplacer l'objet
+            if (selected && this.currentGlobalState != null && this.currentState != null) {
+                // ATTENTION : On ajoute le paramètre SelectedTextureProviderId ici
+                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState, item.OriginalRef.SelectedTextureProviderId);
+            }
+
+            // --- NOUVEAU : UI d'héritage de textures ---
+            if (item.IsMissingTextures) {
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indentation pour s'aligner avec le texte (après l'icône)
+                ImGui.BeginGroup();
+
+                ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), this.loc.GetString("ModDetails_MissingTexturesWarning"));
+
+                // Détermine le texte à afficher dans la combo box
+                string previewValue = string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId)
+                    ? this.loc.GetString("ModDetails_SelectProvider")
+                    : (item.AvailableTextureProviders.TryGetValue(item.OriginalRef.SelectedTextureProviderId, out var pName) ? pName : "Inconnu");
+
+                ImGui.SetNextItemWidth(300f);
+                if (ImGui.BeginCombo($"##combo_tex_{item.BaseName}", previewValue)) {
+                    // Option pour désélectionner (Aucun héritage)
+                    if (ImGui.Selectable(this.loc.GetString("ModDetails_NoProvider"), string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId))) {
+                        item.OriginalRef.SelectedTextureProviderId = string.Empty;
+                    }
+
+                    // Liste des mods capables de fournir les textures pour cet objet
+                    foreach (var provider in item.AvailableTextureProviders) {
+                        bool isSelected = item.OriginalRef.SelectedTextureProviderId == provider.Key;
+                        if (ImGui.Selectable(provider.Value, isSelected)) {
+                            item.OriginalRef.SelectedTextureProviderId = provider.Key; // Sauvegarde du choix
+                        }
+                        if (isSelected) {
+                            ImGui.SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui.EndCombo();
+                }
+                ImGui.EndGroup();
             }
 
             ImGui.PopID();

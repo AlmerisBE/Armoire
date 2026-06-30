@@ -10,6 +10,9 @@ public class DetailedSlotState {
     public bool IsConflicting { get; set; }
     public List<string> OverwrittenByMods { get; set; } = [];
     public uint ItemId { get; set; }
+    public bool IsMissingTextures { get; set; }
+    public Dictionary<string, string> AvailableTextureProviders { get; set; } = [];
+    public string SelectedTextureProviderId { get; set; } = string.Empty;
 }
 
 public class DetailedModState {
