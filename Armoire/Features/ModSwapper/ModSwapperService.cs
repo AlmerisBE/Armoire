@@ -1,13 +1,12 @@
 ﻿namespace Armoire.Features.ModSwapper;
 
 using Armoire.Features.LocalScanner;
-using Armoire.Features.LocalScanner.Models;
 using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin.Services;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 public class ModSwapperService : IModSwapperService {
@@ -23,162 +22,187 @@ public class ModSwapperService : IModSwapperService {
         this.penumbraClient = penumbraClient;
     }
 
-    public bool PerformSwap(string originalModId, string slotKey, string targetModelId) {
+    public bool PerformSwap(string modId, string slotKey, string targetModelId) {
         string rootDir = this.penumbraClient.GetModDirectory();
         if (string.IsNullOrEmpty(rootDir)) {
             return false;
         }
 
-        string originalModPath = Path.Combine(rootDir, originalModId);
-        string patchModId = $"{originalModId}_armoire";
-        string patchModPath = Path.Combine(rootDir, patchModId);
-
-        if (!Directory.Exists(originalModPath)) {
+        string fullModPath = Path.Combine(rootDir, modId);
+        if (!Directory.Exists(fullModPath)) {
             return false;
         }
 
         try {
-            this.pluginLog.Info($"[ModSwapper] Generating Delta Patch for {originalModId} ({slotKey} -> {targetModelId})");
+            this.pluginLog.Info($"[ModSwapper] Starting Ultimate In-Place Swap for {modId} ({slotKey} -> {targetModelId})");
 
-            // 1. Initialize the patch mod if it does not exist
-            InitializePatchMod(originalModPath, patchModPath, originalModId);
+            // We process EVERY json file to ensure all Penumbra Options are maintained
+            var jsonFiles = Directory.GetFiles(fullModPath, "*.json", SearchOption.TopDirectoryOnly);
+            bool anyFilesChanged = false;
 
-            // 2. Find the original .mdl file to modify (by reading the scanner cache)
-            if (!this.scannerManager.ModCache.TryGetValue(originalModId, out var cache)) {
-                return false;
+            foreach (var configFile in jsonFiles) {
+                string fileName = Path.GetFileName(configFile);
+                if (fileName.Equals("meta.json", StringComparison.OrdinalIgnoreCase)) {
+                    continue;
+                }
+
+                string backupPath = configFile + ".armoire_bak";
+                string jsonContent = File.ReadAllText(configFile);
+                var root = JToken.Parse(jsonContent);
+
+                if (RecurseAndReplace(root, slotKey, targetModelId, fullModPath)) {
+                    // Create backup only if changes were made and no backup exists
+                    if (!File.Exists(backupPath)) {
+                        File.Copy(configFile, backupPath);
+                    }
+
+                    File.WriteAllText(configFile, root.ToString());
+                    anyFilesChanged = true;
+                }
             }
 
-            string originalMdlPath = FindMdlPathForSlot(cache, slotKey);
-            if (string.IsNullOrEmpty(originalMdlPath)) {
-                this.pluginLog.Warning($"[ModSwapper] No .mdl found for slot {slotKey} in original mod.");
-                return false;
+            if (anyFilesChanged) {
+                this.penumbraClient.ReloadMod(modId);
+                this.penumbraClient.RedrawAll();
+                return true;
             }
 
-            // 3. Patch the binary and copy it into the patch mod
-            string patchedLocalMdlPath = PatchModelBinary(originalModPath, patchModPath, originalMdlPath, targetModelId);
-            if (string.IsNullOrEmpty(patchedLocalMdlPath)) {
-                return false;
-            }
-
-            // 4. Update the default_mod.json of the patch
-            string newGameRoute = this.modelIdRegex.Replace(originalMdlPath, targetModelId);
-            UpdatePatchJson(patchModPath, newGameRoute, patchedLocalMdlPath);
-
-            // 5. Tell Penumbra to reload (it will detect the new folder)
-            this.penumbraClient.ReloadMod(patchModId);
-
-            // (Priority management via the Penumbra API will require an update to PenumbraClient)
-            this.penumbraClient.RedrawAll();
-
-            return true;
+            return false;
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, $"[ModSwapper] Failed to generate Delta Patch for {originalModId}");
+            this.pluginLog.Error(ex, $"[ModSwapper] Failed to perform swap for mod {modId}");
             return false;
         }
     }
 
-    public bool ResetMod(string originalModId) {
+    public bool ResetMod(string modId) {
         string rootDir = this.penumbraClient.GetModDirectory();
         if (string.IsNullOrEmpty(rootDir)) {
             return false;
         }
 
-        string patchModId = $"{originalModId}_armoire";
-        string patchModPath = Path.Combine(rootDir, patchModId);
+        string fullModPath = Path.Combine(rootDir, modId);
+        var backupFiles = Directory.GetFiles(fullModPath, "*.armoire_bak", SearchOption.TopDirectoryOnly);
 
-        if (!Directory.Exists(patchModPath)) {
-            this.pluginLog.Warning($"[ModSwapper] No patch mod found for {originalModId}. Already clean.");
+        if (backupFiles.Length == 0) {
             return false;
         }
 
         try {
-            // Complete and radical deletion of the generated Patch mod directory
-            Directory.Delete(patchModPath, true);
+            // 1. Restore JSON backups
+            foreach (var backupPath in backupFiles) {
+                string originalFilePath = backupPath.Replace(".armoire_bak", "");
+                File.Copy(backupPath, originalFilePath, overwrite: true);
+                File.Delete(backupPath);
+            }
 
-            // Penumbra will clean its cache if the folder disappeared
-            this.penumbraClient.ReloadMod(patchModId);
+            // 2. Clean up all generated binary files (.mdl and .mtrl)
+            var patchedFiles = Directory.GetFiles(fullModPath, "*_armoire.*", SearchOption.AllDirectories);
+            foreach (var file in patchedFiles) {
+                if (file.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase)) {
+                    File.Delete(file);
+                }
+            }
+
+            this.penumbraClient.ReloadMod(modId);
             this.penumbraClient.RedrawAll();
             return true;
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, $"[ModSwapper] Failed to delete patch mod for {originalModId}");
+            this.pluginLog.Error(ex, $"[ModSwapper] Failed to restore backup for mod {modId}");
             return false;
         }
     }
 
-    private void InitializePatchMod(string originalModPath, string patchModPath, string originalModId) {
-        if (!Directory.Exists(patchModPath)) {
-            Directory.CreateDirectory(patchModPath);
-        }
+    private bool RecurseAndReplace(JToken token, string slotKey, string targetModelId, string fullModPath) {
+        bool changed = false;
 
-        string metaPath = Path.Combine(patchModPath, "meta.json");
-        if (!File.Exists(metaPath)) {
-            // Retrieve the original mod's name to create the suffix
-            string originalName = originalModId;
-            string origMeta = Path.Combine(originalModPath, "meta.json");
-            if (File.Exists(origMeta)) {
-                try {
-                    var metaObj = JObject.Parse(File.ReadAllText(origMeta));
-                    originalName = metaObj["Name"]?.ToString() ?? originalModId;
-                } catch { }
+        if (token is JObject obj) {
+            if (obj["Files"] is JObject files) {
+                changed |= ProcessJObjectPaths(files, slotKey, targetModelId, fullModPath);
+            }
+            if (obj["FileSwaps"] is JObject fileSwaps) {
+                changed |= ProcessJObjectPaths(fileSwaps, slotKey, targetModelId, fullModPath);
             }
 
-            var patchMeta = new JObject {
-                ["Name"] = $"{originalName} (Armoire Swaps)",
-                ["Author"] = "Armoire Plugin",
-                ["Description"] = "Auto-generated Delta Patch for item swapping. Keep original mod enabled!",
-                ["Version"] = "1.0.0"
-            };
-            File.WriteAllText(metaPath, patchMeta.ToString());
-        }
-
-        string jsonPath = Path.Combine(patchModPath, "default_mod.json");
-        if (!File.Exists(jsonPath)) {
-            var defaultJson = new JObject {
-                ["Files"] = new JObject(),
-                ["FileSwaps"] = new JObject(),
-                ["Manipulations"] = new JArray()
-            };
-            File.WriteAllText(jsonPath, defaultJson.ToString());
-        }
-    }
-
-    private string FindMdlPathForSlot(ArmoireModCacheEntry cache, string slotKey) {
-        var allPaths = cache.ModifiedGamePaths.Concat(cache.OptionGroups.Values.SelectMany(g => g.OptionPaths.SelectMany(p => p)));
-
-        foreach (var path in allPaths) {
-            string lower = path.ToLowerInvariant();
-            if (lower.EndsWith(".mdl") && (lower.Contains($"_{slotKey}.") || lower.Contains($"_{slotKey}_") || (slotKey == "wpn" && lower.Contains("weapon")))) {
-                return path;
+            foreach (var prop in obj.Properties()) {
+                if (prop.Name.Equals("Files", StringComparison.OrdinalIgnoreCase) ||
+                    prop.Name.Equals("FileSwaps", StringComparison.OrdinalIgnoreCase)) {
+                    continue;
+                }
+                changed |= RecurseAndReplace(prop.Value, slotKey, targetModelId, fullModPath);
+            }
+        } else if (token is JArray arr) {
+            foreach (var item in arr) {
+                changed |= RecurseAndReplace(item, slotKey, targetModelId, fullModPath);
             }
         }
-        return string.Empty;
+
+        return changed;
     }
 
-    private string PatchModelBinary(string originalModPath, string patchModPath, string originalGamePath, string newModelId) {
-        var match = this.modelIdRegex.Match(originalGamePath);
-        if (!match.Success) {
-            return string.Empty;
+    private bool ProcessJObjectPaths(JObject dict, string slotKey, string targetModelId, string fullModPath) {
+        var propertiesToReplace = new List<JProperty>();
+        bool hasChanged = false;
+
+        foreach (var prop in dict.Properties()) {
+            string originalGamePath = prop.Name;
+            if (IsPathMatchingSlot(originalGamePath, slotKey)) {
+                string newGamePath = this.modelIdRegex.Replace(originalGamePath, targetModelId);
+                if (newGamePath != originalGamePath) {
+                    propertiesToReplace.Add(prop);
+                }
+            }
         }
 
-        string oldModelId = match.Value;
+        foreach (var prop in propertiesToReplace) {
+            string originalGamePath = prop.Name;
+            JToken? localFilePath = prop.Value;
 
-        // Create a flat local path for the file in the patch mod
-        string localMdlName = Path.GetFileName(originalGamePath).Replace(oldModelId, newModelId, StringComparison.OrdinalIgnoreCase);
-        string absoluteOriginalMdl = Path.Combine(originalModPath, originalGamePath);
-        string absolutePatchMdl = Path.Combine(patchModPath, localMdlName);
+            var match = this.modelIdRegex.Match(originalGamePath);
+            string oldModelId = match.Success ? match.Value : string.Empty;
 
-        // If the source file is not at the root (hidden in an option), scan the original folder recursively
-        if (!File.Exists(absoluteOriginalMdl)) {
-            var files = Directory.GetFiles(originalModPath, Path.GetFileName(originalGamePath), SearchOption.AllDirectories);
-            if (files.Length > 0) {
-                absoluteOriginalMdl = files[0];
+            string newGamePath = this.modelIdRegex.Replace(originalGamePath, targetModelId);
+            prop.Remove();
+
+            // --- DUAL BINARY PATCHING ---
+            if (localFilePath != null && localFilePath.Type == JTokenType.String) {
+                string localStr = localFilePath.ToString();
+
+                // We patch both 3D Models AND Materials so textures keep their integrity across Options
+                if ((localStr.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase) ||
+                     localStr.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase)) &&
+                     !string.IsNullOrEmpty(oldModelId)) {
+
+                    string patchedPath = PatchBinaryFile(fullModPath, localStr, oldModelId, targetModelId);
+                    dict[newGamePath] = patchedPath;
+                } else {
+                    dict[newGamePath] = localFilePath;
+                }
             } else {
-                return string.Empty;
+                dict[newGamePath] = localFilePath;
             }
+
+            hasChanged = true;
         }
 
+        return hasChanged;
+    }
+
+    /// <summary>
+    /// Hex-edits FFXIV binary files (.mdl, .mtrl) to rewrite internal hardcoded paths.
+    /// This allows textures to load correctly regardless of the selected Penumbra Option.
+    /// </summary>
+    private string PatchBinaryFile(string fullModPath, string localFilePath, string oldModelId, string newModelId) {
+        string absoluteOriginalPath = Path.Combine(fullModPath, localFilePath);
+        if (!File.Exists(absoluteOriginalPath)) {
+            return localFilePath;
+        }
+
+        string extension = Path.GetExtension(localFilePath);
+        string newLocalPath = localFilePath.Replace(extension, $"_{newModelId}_armoire{extension}", StringComparison.OrdinalIgnoreCase);
+        string absolutePatchPath = Path.Combine(fullModPath, newLocalPath);
+
         try {
-            byte[] fileBytes = File.ReadAllBytes(absoluteOriginalMdl);
+            byte[] fileBytes = File.ReadAllBytes(absoluteOriginalPath);
             byte[] searchBytes = System.Text.Encoding.ASCII.GetBytes(oldModelId.ToLowerInvariant());
             byte[] replaceBytes = System.Text.Encoding.ASCII.GetBytes(newModelId.ToLowerInvariant());
 
@@ -194,25 +218,24 @@ public class ModSwapperService : IModSwapperService {
                 }
             }
 
-            File.WriteAllBytes(absolutePatchMdl, fileBytes);
-            return localMdlName;
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePatchPath)!);
+            File.WriteAllBytes(absolutePatchPath, fileBytes);
+            return newLocalPath;
         } catch (Exception ex) {
-            this.pluginLog.Error(ex, "Failed to patch binary.");
-            return string.Empty;
+            this.pluginLog.Error(ex, $"[ModSwapper] Failed to binary patch {localFilePath}");
+            return localFilePath;
         }
     }
 
-    private void UpdatePatchJson(string patchModPath, string newGameRoute, string patchedLocalMdlPath) {
-        string jsonPath = Path.Combine(patchModPath, "default_mod.json");
-        try {
-            var root = JObject.Parse(File.ReadAllText(jsonPath));
-            if (root["Files"] is JObject files) {
-                // Consolidation: add or overwrite the existing path for this slot
-                files[newGameRoute] = patchedLocalMdlPath;
-            }
-            File.WriteAllText(jsonPath, root.ToString());
-        } catch (Exception ex) {
-            this.pluginLog.Error(ex, "Failed to update patch default_mod.json");
+    private bool IsPathMatchingSlot(string path, string slotKey) {
+        string lowerPath = path.ToLowerInvariant();
+        if (slotKey != "wpn" && slotKey != "sub" && slotKey != "custom" && slotKey != "unknown") {
+            return lowerPath.Contains($"_{slotKey}.") || lowerPath.Contains($"_{slotKey}_");
         }
+        if (slotKey == "wpn" || slotKey == "sub") {
+            return lowerPath.Contains("chara/weapon/");
+        }
+
+        return false;
     }
 }

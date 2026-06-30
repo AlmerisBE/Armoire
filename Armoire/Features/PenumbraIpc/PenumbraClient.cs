@@ -22,6 +22,8 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
 
     private readonly ReloadMod reloadModSubscriber;
     private readonly RedrawAll redrawAllSubscriber;
+    private readonly TrySetMod trySetModSubscriber;
+    private readonly AddMod addModSubscriber;
 
     public event Action? OnInitialized;
     public event Action? OnDisposed;
@@ -44,6 +46,8 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
 
         this.reloadModSubscriber = new ReloadMod(pluginInterface);
         this.redrawAllSubscriber = new RedrawAll(pluginInterface);
+        this.trySetModSubscriber = new TrySetMod(pluginInterface);
+        this.addModSubscriber = new AddMod(pluginInterface);
     }
 
     private void HandleInitialized() {
@@ -122,6 +126,21 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         return result;
     }
 
+    public bool AddMod(string modDirectory) {
+        if (!IsEnabled()) {
+            return false;
+        }
+
+        try {
+            var result = this.addModSubscriber.Invoke(modDirectory);
+
+            return result == PenumbraApiEc.Success || (int)result == 1;
+        } catch (Exception ex) {
+            this.pluginLog.Error(ex, $"[PenumbraClient] Failed to add new mod {modDirectory}");
+            return false;
+        }
+    }
+
     public bool ReloadMod(string modDirectory) {
         if (!IsEnabled()) {
             return false;
@@ -132,6 +151,25 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
             return result == PenumbraApiEc.Success;
         } catch (Exception ex) {
             this.pluginLog.Error(ex, $"[PenumbraClient] Failed to reload mod at {modDirectory}");
+            return false;
+        }
+    }
+
+    public bool EnableMod(string modDirectory) {
+        if (!IsEnabled()) {
+            return false;
+        }
+
+        try {
+            // On récupère l'ID de la collection active pour activer le mod au bon endroit
+            var activeCollection = GetActiveCollection();
+
+            // Invoke prend : (Guid collectionId, string modDirectory, bool enabled)
+            var result = this.trySetModSubscriber.Invoke(activeCollection.Id, modDirectory, true);
+
+            return result == PenumbraApiEc.Success;
+        } catch (Exception ex) {
+            this.pluginLog.Error(ex, $"[PenumbraClient] Failed to enable mod {modDirectory}");
             return false;
         }
     }
