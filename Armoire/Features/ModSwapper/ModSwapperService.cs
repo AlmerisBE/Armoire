@@ -13,34 +13,29 @@ public class ModSwapperService : IModSwapperService {
     private readonly IModScannerManager scannerManager;
     private readonly IPluginLog pluginLog;
     private readonly IPenumbraClient penumbraClient;
-    private readonly ArmoireConfiguration config;
+    private readonly ArmoireConfiguration configuration;
 
     private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public ModSwapperService(
-        IModScannerManager scannerManager,
-        IPluginLog pluginLog,
-        IPenumbraClient penumbraClient,
-        ArmoireConfiguration config) {
-
+    public ModSwapperService(IModScannerManager scannerManager, IPluginLog pluginLog, IPenumbraClient penumbraClient, ArmoireConfiguration configuration) {
         this.scannerManager = scannerManager;
         this.pluginLog = pluginLog;
         this.penumbraClient = penumbraClient;
-        this.config = config;
+        this.configuration = configuration;
     }
 
     public bool PerformSwap(string modId, string slotKey, string targetModelId, string textureProviderModId = "") {
-        // 1. Frappe principale sur le mod de base
+        // 1. Process the primary model mod swap
         bool mainSwap = ExecuteSingleSwap(modId, slotKey, targetModelId);
         bool texSwap = false;
 
-        // 2. Frappe secondaire sur le fournisseur de textures
-        if (!string.IsNullOrWhiteSpace(textureProviderModId)) {
+        // 2. Process the secondary texture provider mod swap if specified
+        if (!string.WhiteSpace(textureProviderModId)) {
             this.pluginLog.Info($"[ModSwapper] Executing secondary texture inheritance swap for {textureProviderModId}");
             texSwap = ExecuteSingleSwap(textureProviderModId, slotKey, targetModelId);
         }
 
-        // 3. Rafraîchissement global une seule fois à la fin pour éviter les lags
+        // 3. Trigger a single global redraw at the end to prevent performance stutter
         if (mainSwap || texSwap) {
             this.penumbraClient.RedrawAll();
             return true;
@@ -86,7 +81,21 @@ public class ModSwapperService : IModSwapperService {
             }
 
             if (anyFilesChanged) {
-                // On recharge le mod spécifique dans Penumbra pour qu'il capte les nouveaux fichiers
+                // Record the modification into the configuration memory persistence layer
+                if (!this.configuration.ModifiedMods.TryGetValue(targetModId, out var modEntry)) {
+                    // Try to fetch the real mod name from the scanner cache, fallback to directory name
+                    string modName = this.scannerManager.ModCache.TryGetValue(targetModId, out var cache)
+                        ? cache.ModName
+                        : targetModId;
+
+                    modEntry = new ModifiedModEntry { ModName = modName };
+                    this.configuration.ModifiedMods[targetModId] = modEntry;
+                }
+
+                // Track the swap configuration for this slot
+                modEntry.Swaps[slotKey] = targetModelId;
+                this.configuration.Save();
+
                 this.penumbraClient.ReloadMod(targetModId);
                 return true;
             }
@@ -108,22 +117,22 @@ public class ModSwapperService : IModSwapperService {
         var backupFiles = Directory.GetFiles(fullModPath, "*.armoire_bak", SearchOption.TopDirectoryOnly);
 
         if (backupFiles.Length == 0) {
-            // Even if there are no backups, ensure we clean up the config just in case it got orphaned
-            if (this.config.ModifiedMods.Remove(modId)) {
-                this.config.Save();
+            // Ensure data cleanup even if backup files are missing to avoid orphaned config rows
+            if (this.configuration.ModifiedMods.Remove(modId)) {
+                this.configuration.Save();
             }
             return false;
         }
 
         try {
-            // 1. Restore JSON backups
+            // 1. Restore original configuration files from backups
             foreach (var backupPath in backupFiles) {
                 string originalFilePath = backupPath.Replace(".armoire_bak", "");
                 File.Copy(backupPath, originalFilePath, overwrite: true);
                 File.Delete(backupPath);
             }
 
-            // 2. Clean up all generated binary files (.mdl and .mtrl)
+            // 2. Clean up all generated patched binary models and materials
             var patchedFiles = Directory.GetFiles(fullModPath, "*_armoire.*", SearchOption.AllDirectories);
             foreach (var file in patchedFiles) {
                 if (file.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase)) {
@@ -131,10 +140,10 @@ public class ModSwapperService : IModSwapperService {
                 }
             }
 
-            // --- MEMORY PERSISTENCE ---
-            // Remove the mod from memory since it has been completely reverted to vanilla
-            this.config.ModifiedMods.Remove(modId);
-            this.config.Save();
+            // Remove the mod entry from configuration memory persistence
+            if (this.configuration.ModifiedMods.Remove(modId)) {
+                this.configuration.Save();
+            }
 
             this.penumbraClient.ReloadMod(modId);
             this.penumbraClient.RedrawAll();
@@ -147,7 +156,6 @@ public class ModSwapperService : IModSwapperService {
 
     private bool RecurseAndReplace(JToken token, string slotKey, string targetModelId, string fullModPath) {
         bool changed = false;
-
         if (token is JObject obj) {
             if (obj["Files"] is JObject files) {
                 changed |= ProcessJObjectPaths(files, slotKey, targetModelId, fullModPath);
@@ -192,14 +200,12 @@ public class ModSwapperService : IModSwapperService {
 
             var match = this.modelIdRegex.Match(originalGamePath);
             string oldModelId = match.Success ? match.Value : string.Empty;
-
             string newGamePath = this.modelIdRegex.Replace(originalGamePath, targetModelId);
             prop.Remove();
 
             // --- DUAL BINARY PATCHING ---
             if (localFilePath != null && localFilePath.Type == JTokenType.String) {
                 string localStr = localFilePath.ToString();
-
                 // We patch both 3D Models AND Materials so textures keep their integrity across Options
                 if ((localStr.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase) ||
                      localStr.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase)) &&
@@ -238,7 +244,10 @@ public class ModSwapperService : IModSwapperService {
             for (int i = 0; i <= fileBytes.Length - searchBytes.Length; i++) {
                 bool isMatch = true;
                 for (int j = 0; j < searchBytes.Length; j++) {
-                    if (fileBytes[i + j] != searchBytes[j]) { isMatch = false; break; }
+                    if (fileBytes[i + j] != searchBytes[j]) {
+                        isMatch = false;
+                        break;
+                    }
                 }
                 if (isMatch) {
                     for (int j = 0; j < replaceBytes.Length; j++) {
@@ -259,7 +268,8 @@ public class ModSwapperService : IModSwapperService {
     private bool IsPathMatchingSlot(string path, string slotKey) {
         string lowerPath = path.ToLowerInvariant();
         if (slotKey != "wpn" && slotKey != "sub" && slotKey != "custom" && slotKey != "unknown") {
-            return lowerPath.Contains($"_{slotKey}.") || lowerPath.Contains($"_{slotKey}_");
+            return lowerPath.Contains($"_{slotKey}.") ||
+                   lowerPath.Contains($"_{slotKey}_");
         }
         if (slotKey == "wpn" || slotKey == "sub") {
             return lowerPath.Contains("chara/weapon/");

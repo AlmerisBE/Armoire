@@ -12,6 +12,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -28,6 +29,7 @@ public class ModDetailsWindow : IDisposable {
     private string currentModId = string.Empty;
     private DetailedModState? currentState = null;
     private EffectiveCollectionState? currentGlobalState = null;
+    private Dictionary<string, string> selectedTextureProviders = [];
 
     public ModDetailsWindow(
         IModDetailsResolver resolver,
@@ -51,6 +53,7 @@ public class ModDetailsWindow : IDisposable {
 
     public void Open(string modId) {
         this.currentModId = modId;
+        this.selectedTextureProviders.Clear();
         this.syncManager.ForceRefresh();
         this.IsVisible = true;
     }
@@ -271,32 +274,42 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.SetTooltip("Clic-droit pour plus d'options");
             }
 
-            // Gestion du clic pour remplacer l'objet
+            // Handle click to replace the item
             if (selected && this.currentGlobalState != null && this.currentState != null) {
-                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState, item.OriginalRef.SelectedTextureProviderId);
+                // Add '?' to string to safely handle null from TryGetValue
+                this.selectedTextureProviders.TryGetValue(slotKey, out string? providerIdToPass);
+                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState, providerIdToPass ?? string.Empty);
             }
 
-            // UI d'héritage de textures
+            // Texture inheritance UI
             if (item.IsMissingTextures) {
-                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indentation pour s'aligner avec le texte (après l'icône)
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indent to align with the text
                 ImGui.BeginGroup();
 
-                ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), this.loc.GetString("ModDetails_MissingTexturesWarning"));
+                // Fix clipped text by using TextWrapped
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.6f, 0.0f, 1.0f));
+                ImGui.TextWrapped(this.loc.GetString("ModDetails_MissingTexturesWarning"));
+                ImGui.PopStyleColor();
 
-                string previewValue = string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId)
+                // Add '?' to string here as well to fix CS8600 warning
+                this.selectedTextureProviders.TryGetValue(slotKey, out string? selectedProviderId);
+                selectedProviderId ??= string.Empty;
+
+                string previewValue = string.IsNullOrEmpty(selectedProviderId)
                     ? this.loc.GetString("ModDetails_SelectProvider")
-                    : (item.AvailableTextureProviders.TryGetValue(item.OriginalRef.SelectedTextureProviderId, out var pName) ? pName : "Inconnu");
+                    : (item.AvailableTextureProviders.TryGetValue(selectedProviderId, out var pName) ? pName : "Unknown");
 
                 ImGui.SetNextItemWidth(300f);
                 if (ImGui.BeginCombo($"##combo_tex_{item.BaseName}", previewValue)) {
-                    if (ImGui.Selectable(this.loc.GetString("ModDetails_NoProvider"), string.IsNullOrEmpty(item.OriginalRef.SelectedTextureProviderId))) {
-                        item.OriginalRef.SelectedTextureProviderId = string.Empty;
+                    if (ImGui.Selectable(this.loc.GetString("ModDetails_NoProvider"), string.IsNullOrEmpty(selectedProviderId))) {
+                        this.selectedTextureProviders[slotKey] = string.Empty;
                     }
 
                     foreach (var provider in item.AvailableTextureProviders) {
-                        bool isSelected = item.OriginalRef.SelectedTextureProviderId == provider.Key;
+                        bool isSelected = selectedProviderId == provider.Key;
                         if (ImGui.Selectable(provider.Value, isSelected)) {
-                            item.OriginalRef.SelectedTextureProviderId = provider.Key;
+
+                            this.selectedTextureProviders[slotKey] = provider.Key;
                         }
                         if (isSelected) {
                             ImGui.SetItemDefaultFocus();
