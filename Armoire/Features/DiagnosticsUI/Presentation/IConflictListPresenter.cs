@@ -11,7 +11,7 @@ public interface IConflictListPresenter {
     /// <summary>
     /// Gets the mods modified by Armoire, dynamically filtered by the search query.
     /// </summary>
-    IReadOnlyDictionary<string, Armoire.Features.LocalScanner.Models.ModifiedModEntry> FilteredModifiedMods { get; }
+    IReadOnlyDictionary<string, ModifiedModEntry> FilteredModifiedMods { get; }
 
     /// <summary>
     /// Gets the vanilla conflicts, dynamically filtered by the search query and excluding already modified mods.

@@ -102,7 +102,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IVanillaReplacementPresenter, VanillaReplacementPresenter>();
         services.AddSingleton<IConflictListPresenter, ConflictListPresenter>();
         services.AddSingleton<IModScannerPresenter, ModScannerPresenter>();
-        services.AddSingleton<PenumbraStatusPresenter>();
+        services.AddSingleton<IPenumbraStatusPresenter, PenumbraStatusPresenter>();
     }
 
     private static void RegisterUiComponents(IServiceCollection services) {

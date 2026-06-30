@@ -20,10 +20,10 @@ public class ConflictListPresenter : IConflictListPresenter {
 
     private List<PenumbraMod> currentConflicts = new();
 
-    public IReadOnlyDictionary<string, Armoire.Features.LocalScanner.Models.ModifiedModEntry> FilteredModifiedMods {
+    public IReadOnlyDictionary<string, ModifiedModEntry> FilteredModifiedMods {
         get {
             if (this.config.ModifiedMods.Count == 0) {
-                return new Dictionary<string, Armoire.Features.LocalScanner.Models.ModifiedModEntry>();
+                return new Dictionary<string, ModifiedModEntry>();
             }
 
             return this.config.ModifiedMods

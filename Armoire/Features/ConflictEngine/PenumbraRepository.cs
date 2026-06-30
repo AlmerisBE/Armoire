@@ -150,7 +150,6 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         var lineage = new List<PenumbraCollection>();
 
         BuildLineage(activeCollectionId, visited, lineage);
-        lineage.Reverse();
 
         // 1. Resolve basic enablement hierarchy
         foreach (var collection in lineage) {
@@ -325,6 +324,7 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         lineage.Add(collection);
+
         foreach (var parentId in collection.ParentIds) {
             BuildLineage(parentId, visited, lineage);
         }
