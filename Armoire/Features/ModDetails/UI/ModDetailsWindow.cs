@@ -3,6 +3,7 @@
 using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
+using Armoire.Features.GlamourerIpc;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Models;
 using Armoire.Features.ModSwapper;
@@ -21,6 +22,7 @@ public class ModDetailsWindow : IDisposable {
     private readonly ITextureProvider textureProvider;
     private readonly VanillaReplacementWindow vanillaWindow;
     private readonly IModSwapperService swapperService;
+    private readonly IGlamourerClient glamourerClient;
 
     public bool IsVisible { get; set; } = false;
     private string currentModId = string.Empty;
@@ -33,7 +35,8 @@ public class ModDetailsWindow : IDisposable {
         ILocalizationService loc,
         ITextureProvider textureProvider,
         VanillaReplacementWindow vanillaWindow,
-        IModSwapperService swapperService
+        IModSwapperService swapperService,
+        IGlamourerClient glamourerClient
     ) {
         this.resolver = resolver;
         this.syncManager = syncManager;
@@ -41,6 +44,7 @@ public class ModDetailsWindow : IDisposable {
         this.textureProvider = textureProvider;
         this.vanillaWindow = vanillaWindow;
         this.swapperService = swapperService;
+        this.glamourerClient = glamourerClient;
 
         this.syncManager.OnStatusUpdated += RefreshData;
     }
@@ -171,6 +175,7 @@ public class ModDetailsWindow : IDisposable {
             .Select(g => new {
                 IconId = g.Key.IconId,
                 BaseName = g.Key.BaseName,
+                ItemId = g.First().ItemId,
                 IsConflicting = g.Any(x => x.IsConflicting),
                 OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList()
             })
@@ -245,6 +250,16 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.TextColored(new Vector4(0.4f, 1, 0.4f, 1), "(Actif et appliqué)");
             }
             ImGui.EndGroup();
+
+            if (item.ItemId > 0 && ImGui.BeginPopupContextItem($"mod_ctx_{item.BaseName}_{item.IconId}")) {
+                if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
+                    this.glamourerClient.EquipItem(item.ItemId, slotKey);
+                }
+                ImGui.EndPopup();
+            }
+            if (ImGui.IsItemHovered()) {
+                ImGui.SetTooltip("Clic-droit pour plus d'options");
+            }
 
             if (ImGui.IsItemClicked() && this.currentGlobalState != null && this.currentState != null) {
                 this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState);

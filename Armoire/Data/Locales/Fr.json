@@ -92,5 +92,6 @@
   "UI_VanillaWindow_SearchOrigin": "Origine (ex: Donjon)...",
   "UI_VanillaWindow_NoResults": "Aucun équipement trouvé pour ces critères.",
   "UI_VanillaWindow_BtnChoose": "Choisir",
-  "UI_ModDetails_BtnReset": "Réinitialiser le mod (Paramètres par défaut)"
+  "UI_ModDetails_BtnReset": "Réinitialiser le mod (Paramètres par défaut)",
+  "UI_ContextMenu_EquipGlamourer": "Équiper avec Glamourer"
 }

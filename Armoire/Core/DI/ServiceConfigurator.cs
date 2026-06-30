@@ -4,6 +4,7 @@ using Armoire.Core.UI;
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.DiagnosticsUI;
 using Armoire.Features.GameData;
+using Armoire.Features.GlamourerIpc;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
@@ -54,12 +55,13 @@ public static class ServiceConfigurator {
         services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
         services.AddSingleton<IModSwapperService, ModSwapperService>();
 
-        // 3. Features dependencies (Penumbra)
+        // 3. Features dependencies (Penumbra, Glamourer)
         services.AddSingleton<IPenumbraClient, PenumbraClient>();
         services.AddSingleton<IPenumbraRepository, PenumbraRepository>();
         services.AddSingleton<IPenumbraAnalyzer, PenumbraAnalyzer>();
         services.AddSingleton<IPenumbraSyncManager, PenumbraSyncManager>();
         services.AddSingleton<IModScannerManager, ModScannerManager>();
+        services.AddSingleton<IGlamourerClient, GlamourerClient>();
 
         // Section UI Penumbra
         services.AddSingleton<ModScannerWindow>();

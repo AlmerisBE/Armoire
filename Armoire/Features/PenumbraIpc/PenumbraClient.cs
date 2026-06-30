@@ -3,6 +3,7 @@
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
+using global::Penumbra.Api.Enums;
 using global::Penumbra.Api.IpcSubscribers;
 using System;
 using System.Collections.Generic;
@@ -19,8 +20,8 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
     private readonly ICallGateSubscriber<Action> initializedSubscriber;
     private readonly ICallGateSubscriber<Action> disposedSubscriber;
 
-    private readonly ICallGateSubscriber<string, string, int> reloadModSubscriber;
-    private readonly ICallGateSubscriber<int, int> redrawAllSubscriber;
+    private readonly ReloadMod reloadModSubscriber;
+    private readonly RedrawAll redrawAllSubscriber;
 
     public event Action? OnInitialized;
     public event Action? OnDisposed;
@@ -41,8 +42,8 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         this.disposedSubscriber = pluginInterface.GetIpcSubscriber<Action>("Penumbra.Disposed");
         this.disposedSubscriber.Subscribe(HandleDisposed);
 
-        this.reloadModSubscriber = pluginInterface.GetIpcSubscriber<string, string, int>("Penumbra.ReloadMod");
-        this.redrawAllSubscriber = pluginInterface.GetIpcSubscriber<int, int>("Penumbra.RedrawAll");
+        this.reloadModSubscriber = new ReloadMod(pluginInterface);
+        this.redrawAllSubscriber = new RedrawAll(pluginInterface);
     }
 
     private void HandleInitialized() {
@@ -127,9 +128,8 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         }
 
         try {
-            // Dans Penumbra, ReloadMod prend (Directory, Name). Le nom peut être vide.
-            var result = this.reloadModSubscriber.InvokeFunc(modDirectory, string.Empty);
-            return result == 0; // 0 = Success dans l'API Penumbra
+            var result = this.reloadModSubscriber.Invoke(modDirectory, string.Empty);
+            return result == PenumbraApiEc.Success;
         } catch (Exception ex) {
             this.pluginLog.Error(ex, $"[PenumbraClient] Failed to reload mod at {modDirectory}");
             return false;
@@ -142,8 +142,7 @@ public class PenumbraClient : IPenumbraClient, IDisposable {
         }
 
         try {
-            // 0 = Tous les personnages
-            this.redrawAllSubscriber.InvokeFunc(0);
+            this.redrawAllSubscriber.Invoke(RedrawType.Redraw);
         } catch (Exception ex) {
             this.pluginLog.Error(ex, "[PenumbraClient] Failed to send RedrawAll command.");
         }

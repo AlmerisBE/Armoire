@@ -56,6 +56,7 @@ public class ModDetailsResolver : IModDetailsResolver {
                 AffectedPaths = new List<string> { path },
                 LocalizedItemName = resolvedData.Name,
                 IconId = resolvedData.IconId,
+                ItemId = resolvedData.ItemId,
                 SlotCategory = resolvedData.SlotKey
             };
 
@@ -81,6 +82,7 @@ public class ModDetailsResolver : IModDetailsResolver {
             .Select(g => new DetailedSlotState {
                 LocalizedItemName = g.Key.LocalizedItemName,
                 IconId = g.Key.IconId,
+                ItemId = g.First().ItemId,
                 SlotCategory = g.Key.SlotCategory,
                 IsConflicting = g.Key.IsConflicting,
                 OverwrittenByMods = g.First().OverwrittenByMods,

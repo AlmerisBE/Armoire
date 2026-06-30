@@ -9,6 +9,7 @@ public class DetailedSlotState {
     public string SlotCategory { get; set; } = string.Empty;
     public bool IsConflicting { get; set; }
     public List<string> OverwrittenByMods { get; set; } = [];
+    public uint ItemId { get; set; }
 }
 
 public class DetailedModState {

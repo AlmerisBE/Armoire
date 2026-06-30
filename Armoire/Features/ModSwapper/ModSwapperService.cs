@@ -184,6 +184,15 @@ public class ModSwapperService : IModSwapperService {
     private bool IsPathMatchingSlot(string path, string slotKey) {
         string lowerPath = path.ToLowerInvariant();
 
+        bool isSwappableType = lowerPath.EndsWith(".mdl") ||
+                               lowerPath.EndsWith(".mtrl") ||
+                               lowerPath.EndsWith(".imc") ||
+                               lowerPath.EndsWith(".phyb");
+
+        if (!isSwappableType) {
+            return false;
+        }
+
         if (slotKey != "wpn" && slotKey != "sub" && slotKey != "custom" && slotKey != "unknown") {
             return lowerPath.Contains($"_{slotKey}.") || lowerPath.Contains($"_{slotKey}_");
         }

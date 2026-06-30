@@ -2,6 +2,7 @@
 
 using Armoire.Core.Localization;
 using Armoire.Features.ConflictEngine.Models;
+using Armoire.Features.GlamourerIpc;
 using Armoire.Features.ModSwapper;
 using Armoire.Features.VanillaSearch.Models;
 using Dalamud.Bindings.ImGui;
@@ -17,6 +18,7 @@ public class VanillaReplacementWindow {
     private readonly ITextureProvider textureProvider;
     private readonly ILocalizationService loc;
     private readonly IModSwapperService swapperService;
+    private readonly IGlamourerClient glamourerClient;
 
     public bool IsVisible { get; set; } = false;
     private string currentSlotKey = string.Empty;
@@ -30,11 +32,12 @@ public class VanillaReplacementWindow {
     private List<VanillaItem> availableItems = new();
     private EffectiveCollectionState? lastGlobalState;
 
-    public VanillaReplacementWindow(IVanillaSearchService searchService, ITextureProvider textureProvider, ILocalizationService loc, IModSwapperService swapperService) {
+    public VanillaReplacementWindow(IVanillaSearchService searchService, ITextureProvider textureProvider, ILocalizationService loc, IModSwapperService swapperService, IGlamourerClient glamourerClient) {
         this.searchService = searchService;
         this.textureProvider = textureProvider;
         this.loc = loc;
         this.swapperService = swapperService;
+        this.glamourerClient = glamourerClient;
     }
 
     public void Open(string slotKey, string modId, EffectiveCollectionState globalState) {
@@ -121,6 +124,17 @@ public class VanillaReplacementWindow {
                     // 3. Draw Selection Button aligned to the right side
                     ImGui.SameLine(ImGui.GetWindowWidth() - 90);
                     ImGui.SetCursorPosY(textPos.Y + 6);
+
+                    if (ImGui.BeginPopupContextItem($"vanilla_ctx_{item.ItemId}")) {
+                        if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
+                            this.glamourerClient.EquipItem(item.ItemId, this.currentSlotKey);
+                        }
+                        ImGui.EndPopup();
+                    }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("Clic-droit pour plus d'options");
+                    }
+
                     if (ImGui.Button(this.loc.GetString("UI_VanillaWindow_BtnChoose"))) {
                         bool success = this.swapperService.PerformSwap(this.currentModId, this.currentSlotKey, item.ModelId);
                         this.IsVisible = false;

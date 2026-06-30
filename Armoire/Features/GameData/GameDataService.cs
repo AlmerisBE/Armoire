@@ -12,7 +12,7 @@ public class GameDataService : IGameDataService {
     private readonly IPluginLog pluginLog;
     private readonly ILocalizationService loc;
 
-    private readonly Dictionary<string, (string Name, uint IconId)> equipmentModelCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (string Name, uint IconId, uint ItemId)> equipmentModelCache = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Regex equipmentPathRegex = new Regex(@"chara/equipment/(e\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private readonly Regex weaponPathRegex = new Regex(@"chara/weapon/(w\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -49,7 +49,7 @@ public class GameDataService : IGameDataService {
             if (slot.MainHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "wpn"; } else if (slot.OffHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "sub"; } else if (slot.Head == 1) { modelId = $"e{primaryId:D4}"; slotKey = "met"; } else if (slot.Body == 1) { modelId = $"e{primaryId:D4}"; slotKey = "top"; } else if (slot.Gloves == 1) { modelId = $"e{primaryId:D4}"; slotKey = "glv"; } else if (slot.Legs == 1) { modelId = $"e{primaryId:D4}"; slotKey = "dwn"; } else if (slot.Feet == 1) { modelId = $"e{primaryId:D4}"; slotKey = "sho"; } else if (slot.Ears == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ear"; } else if (slot.Neck == 1) { modelId = $"e{primaryId:D4}"; slotKey = "nek"; } else if (slot.Wrists == 1) { modelId = $"e{primaryId:D4}"; slotKey = "wrs"; } else if (slot.FingerR == 1) { modelId = $"e{primaryId:D4}"; slotKey = "rir"; } else if (slot.FingerL == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ril"; } // SÉPARÉ
 
             if (!string.IsNullOrEmpty(modelId) && !string.IsNullOrEmpty(slotKey)) {
-                this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon));
+                this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon, item.RowId));
             }
         }
     }
@@ -70,6 +70,7 @@ public class GameDataService : IGameDataService {
             if (!string.IsNullOrEmpty(result.SlotKey) && this.equipmentModelCache.TryGetValue($"{modelId}_{result.SlotKey}", out var cacheData)) {
                 result.Name = AppendFileType(cacheData.Name, lowerPath);
                 result.IconId = cacheData.IconId;
+                result.ItemId = cacheData.ItemId;
                 return result;
             }
             result.Name = AppendFileType(string.Format(this.loc.GetString("GameData_GenericEquip"), modelId), lowerPath);
