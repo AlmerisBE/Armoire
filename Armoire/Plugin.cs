@@ -18,6 +18,7 @@ public sealed class Plugin : IDalamudPlugin {
     private readonly MainWindow mainWindow;
     private readonly IWindowManager windowManager;
     private readonly IPenumbraSyncManager syncManager;
+    private readonly ArmoireConfiguration configuration;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
@@ -31,6 +32,10 @@ public sealed class Plugin : IDalamudPlugin {
         ITextureProvider textureProvider) {
 
         this.pluginInterface = pluginInterface;
+
+        configuration = this.pluginInterface.GetPluginConfig() as ArmoireConfiguration ?? new ArmoireConfiguration();
+        configuration.Initialize(this.pluginInterface);
+
         serviceProvider = ServiceConfigurator.ConfigureServices(
             pluginInterface,
             pluginLog,
@@ -40,7 +45,8 @@ public sealed class Plugin : IDalamudPlugin {
             notificationManager,
             clientState,
             dataManager,
-            textureProvider
+            textureProvider,
+            configuration
         );
 
         mainWindow = serviceProvider.GetRequiredService<MainWindow>();

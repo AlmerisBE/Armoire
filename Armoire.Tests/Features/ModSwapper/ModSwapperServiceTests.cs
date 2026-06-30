@@ -18,6 +18,7 @@ public class ModSwapperServiceTests : IDisposable {
     private readonly IPluginLog mockLog;
     private readonly IModScannerManager mockScanner;
     private readonly IPenumbraClient mockPenumbra;
+    private readonly ArmoireConfiguration mockConfiguration;
 
     public ModSwapperServiceTests() {
         this.tempRootDirectory = Path.GetTempPath();
@@ -29,6 +30,7 @@ public class ModSwapperServiceTests : IDisposable {
         this.mockLog = Substitute.For<IPluginLog>();
         this.mockScanner = Substitute.For<IModScannerManager>();
         this.mockPenumbra = Substitute.For<IPenumbraClient>();
+        this.mockConfiguration = Substitute.For<ArmoireConfiguration>();
 
         this.mockPenumbra.GetModDirectory().Returns(this.tempRootDirectory);
 
@@ -47,7 +49,7 @@ public class ModSwapperServiceTests : IDisposable {
     [Fact]
     public void PerformSwap_WithOptionGroups_ReplacesPathsInAllJsonFiles() {
         // Arrange
-        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra);
+        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration);
 
         // 1. Create default_mod.json
         string defaultPath = Path.Combine(this.tempModDirectory, "default_mod.json");
@@ -90,7 +92,7 @@ public class ModSwapperServiceTests : IDisposable {
     [Fact]
     public void ResetMod_WithMultipleBackups_RestoresAllOriginalJsonFiles() {
         // Arrange
-        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra);
+        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration);
 
         string defaultPath = Path.Combine(this.tempModDirectory, "default_mod.json");
         string groupPath = Path.Combine(this.tempModDirectory, "group_001.json");

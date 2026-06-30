@@ -30,7 +30,8 @@ public static class ServiceConfigurator {
         INotificationManager notificationManager,
         IClientState clientState,
         IDataManager dataManager,
-        ITextureProvider textureProvider) {
+        ITextureProvider textureProvider,
+        ArmoireConfiguration configuration) {
         var services = new ServiceCollection();
 
         // 1. Dalamud native services
@@ -43,6 +44,7 @@ public static class ServiceConfigurator {
         services.AddSingleton(clientState);
         services.AddSingleton(dataManager);
         services.AddSingleton(textureProvider);
+        services.AddSingleton(configuration);
 
         // 2. Core services
         services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();

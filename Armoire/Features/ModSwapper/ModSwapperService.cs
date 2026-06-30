@@ -13,13 +13,20 @@ public class ModSwapperService : IModSwapperService {
     private readonly IModScannerManager scannerManager;
     private readonly IPluginLog pluginLog;
     private readonly IPenumbraClient penumbraClient;
+    private readonly ArmoireConfiguration config;
 
     private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public ModSwapperService(IModScannerManager scannerManager, IPluginLog pluginLog, IPenumbraClient penumbraClient) {
+    public ModSwapperService(
+        IModScannerManager scannerManager,
+        IPluginLog pluginLog,
+        IPenumbraClient penumbraClient,
+        ArmoireConfiguration config) {
+
         this.scannerManager = scannerManager;
         this.pluginLog = pluginLog;
         this.penumbraClient = penumbraClient;
+        this.config = config;
     }
 
     public bool PerformSwap(string modId, string slotKey, string targetModelId) {
@@ -62,6 +69,20 @@ public class ModSwapperService : IModSwapperService {
             }
 
             if (anyFilesChanged) {
+                // --- MEMORY PERSISTENCE ---
+                // Record the modification in our configuration file
+                if (!this.config.ModifiedMods.TryGetValue(modId, out var modEntry)) {
+                    // Fetch the real mod name from the scanner cache, fallback to directory name if not found
+                    string modName = this.scannerManager.ModCache.TryGetValue(modId, out var cache) ? cache.ModName : modId;
+
+                    modEntry = new ModifiedModEntry { ModName = modName };
+                    this.config.ModifiedMods[modId] = modEntry;
+                }
+
+                // Add or update the swapped slot
+                modEntry.Swaps[slotKey] = targetModelId;
+                this.config.Save();
+
                 this.penumbraClient.ReloadMod(modId);
                 this.penumbraClient.RedrawAll();
                 return true;
@@ -84,6 +105,10 @@ public class ModSwapperService : IModSwapperService {
         var backupFiles = Directory.GetFiles(fullModPath, "*.armoire_bak", SearchOption.TopDirectoryOnly);
 
         if (backupFiles.Length == 0) {
+            // Even if there are no backups, ensure we clean up the config just in case it got orphaned
+            if (this.config.ModifiedMods.Remove(modId)) {
+                this.config.Save();
+            }
             return false;
         }
 
@@ -102,6 +127,11 @@ public class ModSwapperService : IModSwapperService {
                     File.Delete(file);
                 }
             }
+
+            // --- MEMORY PERSISTENCE ---
+            // Remove the mod from memory since it has been completely reverted to vanilla
+            this.config.ModifiedMods.Remove(modId);
+            this.config.Save();
 
             this.penumbraClient.ReloadMod(modId);
             this.penumbraClient.RedrawAll();
@@ -187,10 +217,6 @@ public class ModSwapperService : IModSwapperService {
         return hasChanged;
     }
 
-    /// <summary>
-    /// Hex-edits FFXIV binary files (.mdl, .mtrl) to rewrite internal hardcoded paths.
-    /// This allows textures to load correctly regardless of the selected Penumbra Option.
-    /// </summary>
     private string PatchBinaryFile(string fullModPath, string localFilePath, string oldModelId, string newModelId) {
         string absoluteOriginalPath = Path.Combine(fullModPath, localFilePath);
         if (!File.Exists(absoluteOriginalPath)) {
