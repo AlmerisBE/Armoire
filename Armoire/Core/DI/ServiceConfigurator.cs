@@ -3,6 +3,7 @@ using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Armoire.Features.ConflictEngine;
 using Armoire.Features.DiagnosticsUI;
+using Armoire.Features.DiagnosticsUI.Presentation;
 using Armoire.Features.GameData;
 using Armoire.Features.GlamourerIpc;
 using Armoire.Features.LocalScanner;
@@ -98,6 +99,7 @@ public static class ServiceConfigurator {
     private static void RegisterPresenters(IServiceCollection services) {
         services.AddSingleton<IModDetailsPresenter, ModDetailsPresenter>();
         services.AddSingleton<IVanillaReplacementPresenter, VanillaReplacementPresenter>();
+        services.AddSingleton<IConflictListPresenter, ConflictListPresenter>();
         services.AddSingleton<PenumbraStatusPresenter>();
     }
 
