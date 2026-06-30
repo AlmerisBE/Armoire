@@ -28,8 +28,8 @@ public class GlamourerClient : IGlamourerClient {
         }
 
         try {
-            // 2. Dawntrail : On encapsule les deux teintures (Stain) dans un tableau pour satisfaire IReadOnlyList<byte>
-            IReadOnlyList<byte> stains = new byte[] { 0, 0 };
+            // 2. Dawntrail : On utilise une List<byte> pour forcer la sérialisation JSON en tableau [0, 0] au lieu de Base64
+            IReadOnlyList<byte> stains = new List<byte> { 0, 0 };
 
             // 3. Appel de la méthode avec la signature parfaite
             // Invoke(int characterIndex, ApiEquipSlot slot, ulong itemId, IReadOnlyList<byte> stains, uint key)
