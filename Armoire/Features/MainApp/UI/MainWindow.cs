@@ -1,29 +1,45 @@
 namespace Armoire.Features.MainApp.UI;
 
 using Armoire.Core.Localization;
-using Armoire.Core.UI;
+using Armoire.Features.MainApp.Presentation;
+using Armoire.Features.MainApp.UI.Tabs; // NEW: Tab namespaces
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using System;
-using System.Collections.Generic;
+using System.Numerics;
 
 public class MainWindow : Window, IDisposable {
-    private readonly List<IUiComponent> attachedComponents;
     private readonly ILocalizationService loc;
+    private readonly IMainWindowPresenter presenter;
+
+    // Core structural sub-tabs view subcomponents
+    private readonly HomeTab homeTab;
+    private readonly ResolvedTab resolvedTab;
+    private readonly StatsTab statsTab;
+    private readonly ConfigTab configTab;
+    private readonly AboutTab aboutTab;
 
     public event Action? OnConfigRequested;
-    public IReadOnlyCollection<IUiComponent> AttachedComponents => attachedComponents;
 
-    public MainWindow(ILocalizationService localizationService) : base("Armoire", ImGuiWindowFlags.NoCollapse) {
-        this.loc = localizationService;
-        this.attachedComponents = new List<IUiComponent>();
-        Size = new System.Numerics.Vector2(600, 450);
+    public MainWindow(
+        ILocalizationService loc,
+        IMainWindowPresenter presenter,
+        HomeTab homeTab,
+        ResolvedTab resolvedTab,
+        StatsTab statsTab,
+        ConfigTab configTab,
+        AboutTab aboutTab) : base("Armoire", ImGuiWindowFlags.NoCollapse) {
+        this.loc = loc;
+        this.presenter = presenter;
+        this.homeTab = homeTab;
+        this.resolvedTab = resolvedTab;
+        this.statsTab = statsTab;
+        this.configTab = configTab;
+        this.aboutTab = aboutTab;
+
+        Size = new Vector2(850, 600);
         SizeCondition = ImGuiCond.FirstUseEver;
-    }
-
-    public void AttachComponent(IUiComponent component) {
-        this.attachedComponents.Add(component);
     }
 
     public void InvokeConfigRequested() {
@@ -31,29 +47,47 @@ public class MainWindow : Window, IDisposable {
     }
 
     public override void Draw() {
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextUnformatted(this.loc.GetString("MainWindow_Welcome"));
+        // Grand header greeting the character
+        ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), string.Format(this.loc.GetString("Main_Welcome"), this.presenter.ConnectedCharacter));
 
+        // Configuration shortcut gear top-right
         ImGui.SameLine(ImGui.GetWindowWidth() - ImGui.GetStyle().WindowPadding.X - 30);
-        if (ImGui.Button(FontAwesomeIcon.Cog.ToIconString())) {
+        if (ImGui.Button(Dalamud.Interface.FontAwesomeIcon.Cog.ToIconString())) {
             OnConfigRequested?.Invoke();
         }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
-        foreach (var component in this.attachedComponents) {
-            component.Draw();
-        }
-    }
-
-    public void Dispose() {
-        foreach (var component in this.attachedComponents) {
-            if (component is IDisposable disposableComponent) {
-                disposableComponent.Dispose();
+        // Clean delegate drawing loop to dedicated single-intent classes
+        if (ImGui.BeginTabBar("MainTabs")) {
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabHome"))) {
+                this.homeTab.Draw();
+                ImGui.EndTabItem();
             }
+
+            if (ImGui.BeginTabItem("Conflits résolus")) {
+                this.resolvedTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabStats"))) {
+                this.statsTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabConfig"))) {
+                this.configTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabAbout"))) {
+                this.aboutTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
         }
-        this.attachedComponents.Clear();
     }
+
+    public void Dispose() { }
 }

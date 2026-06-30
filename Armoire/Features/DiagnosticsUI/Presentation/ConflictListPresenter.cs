@@ -1,5 +1,6 @@
 ﻿namespace Armoire.Features.DiagnosticsUI.Presentation;
 
+using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.ModDetails.Presentation;
 using Armoire.Features.ModSwapper;
@@ -48,11 +49,21 @@ public class ConflictListPresenter : IConflictListPresenter {
         ArmoireConfiguration config,
         IModSwapperService swapperService,
         IPenumbraClient penumbraClient,
-        IModDetailsPresenter modDetailsPresenter) {
+        IModDetailsPresenter modDetailsPresenter,
+        IPenumbraSyncManager syncManager) {
         this.config = config;
         this.swapperService = swapperService;
         this.penumbraClient = penumbraClient;
         this.modDetailsPresenter = modDetailsPresenter;
+
+        // Automatically ingest live conflict data whenever Penumbra syncs
+        syncManager.OnStatusUpdated += (result) => {
+            if (result != null) {
+                UpdateLiveConflicts(result.ConflictingMods);
+            } else {
+                UpdateLiveConflicts(new List<PenumbraMod>());
+            }
+        };
     }
 
     public void Open() {

@@ -53,11 +53,6 @@ public sealed class Plugin : IDalamudPlugin {
         windowManager = serviceProvider.GetRequiredService<IWindowManager>();
         syncManager = serviceProvider.GetRequiredService<IPenumbraSyncManager>();
 
-        var uiComponents = serviceProvider.GetServices<IUiComponent>();
-        foreach (var component in uiComponents) {
-            mainWindow.AttachComponent(component);
-        }
-
         commandRegistry = serviceProvider.GetRequiredService<CommandRegistry>();
         commandRegistry.Initialize();
 

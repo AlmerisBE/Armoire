@@ -1,24 +1,28 @@
 namespace Armoire.Core.Tests.UI;
 
 using Armoire.Core.Localization;
-using Armoire.Core.UI;
+using Armoire.Features.DiagnosticsUI.Presentation;
+using Armoire.Features.MainApp.Presentation;
 using Armoire.Features.MainApp.UI;
 using NSubstitute;
 using Xunit;
 
 public class MainWindowTests {
     [Fact]
-    public void AttachComponent_ShouldAddComponentToAttachedComponentsList() {
+    public void InvokeConfigRequested_ShouldTriggerOnConfigRequestedEvent() {
         // Arrange
         var mockLocalization = Substitute.For<ILocalizationService>();
-        var mainWindow = new MainWindow(mockLocalization);
+        var mockPresenter = Substitute.For<IMainWindowPresenter>();
+        var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
 
-        var mockComponent = Substitute.For<IUiComponent>();
+        var mainWindow = new MainWindow(mockLocalization, mockPresenter, mockStatusPresenter);
+        bool eventTriggered = false;
+        mainWindow.OnConfigRequested += () => eventTriggered = true;
 
         // Act
-        mainWindow.AttachComponent(mockComponent);
+        mainWindow.InvokeConfigRequested();
 
         // Assert
-        Assert.Contains(mockComponent, mainWindow.AttachedComponents);
+        Assert.True(eventTriggered);
     }
 }

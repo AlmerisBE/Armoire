@@ -9,7 +9,9 @@ using Armoire.Features.GlamourerIpc;
 using Armoire.Features.LocalScanner;
 using Armoire.Features.LocalScanner.Presentation;
 using Armoire.Features.MainApp.Commands;
+using Armoire.Features.MainApp.Presentation;
 using Armoire.Features.MainApp.UI;
+using Armoire.Features.MainApp.UI.Tabs;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Presentation;
 using Armoire.Features.ModDetails.UI;
@@ -98,6 +100,7 @@ public static class ServiceConfigurator {
     }
 
     private static void RegisterPresenters(IServiceCollection services) {
+        services.AddSingleton<IMainWindowPresenter, MainWindowPresenter>();
         services.AddSingleton<IModDetailsPresenter, ModDetailsPresenter>();
         services.AddSingleton<IVanillaReplacementPresenter, VanillaReplacementPresenter>();
         services.AddSingleton<IConflictListPresenter, ConflictListPresenter>();
@@ -112,7 +115,12 @@ public static class ServiceConfigurator {
         services.AddSingleton<ConflictListWindow>();
         services.AddSingleton<ModDetailsWindow>();
         services.AddSingleton<VanillaReplacementWindow>();
-        services.AddSingleton<IUiComponent, PenumbraStatusView>();
+
+        services.AddSingleton<HomeTab>();
+        services.AddSingleton<ResolvedTab>();
+        services.AddSingleton<StatsTab>();
+        services.AddSingleton<ConfigTab>();
+        services.AddSingleton<AboutTab>();
     }
 
     private static void RegisterCommands(IServiceCollection services) {
