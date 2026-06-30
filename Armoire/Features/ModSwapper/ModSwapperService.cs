@@ -30,13 +30,22 @@ public class ModSwapperService : IModSwapperService {
         bool texSwap = false;
 
         // 2. Process the secondary texture provider mod swap if specified
-        if (!string.WhiteSpace(textureProviderModId)) {
+        if (!string.IsNullOrWhiteSpace(textureProviderModId)) {
             this.pluginLog.Info($"[ModSwapper] Executing secondary texture inheritance swap for {textureProviderModId}");
             texSwap = ExecuteSingleSwap(textureProviderModId, slotKey, targetModelId);
         }
 
         // 3. Trigger a single global redraw at the end to prevent performance stutter
         if (mainSwap || texSwap) {
+            if (mainSwap && this.configuration.ModifiedMods.TryGetValue(modId, out var modEntry)) {
+                if (!string.IsNullOrWhiteSpace(textureProviderModId)) {
+                    modEntry.TextureProviders[slotKey] = textureProviderModId;
+                } else {
+                    modEntry.TextureProviders.Remove(slotKey);
+                }
+                this.configuration.Save();
+            }
+
             this.penumbraClient.RedrawAll();
             return true;
         }

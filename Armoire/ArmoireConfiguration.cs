@@ -10,7 +10,8 @@ public class ModifiedModEntry {
     public string ModName { get; set; } = string.Empty;
 
     // Maps a SlotKey (e.g., "top") to the TargetModelId (e.g., "e0521")
-    public Dictionary<string, string> Swaps { get; set; } = new();
+    public Dictionary<string, string> Swaps { get; set; } = [];
+    public Dictionary<string, string> TextureProviders { get; set; } = [];
 }
 
 [Serializable]

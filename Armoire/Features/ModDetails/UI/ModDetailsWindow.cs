@@ -1,99 +1,57 @@
 ﻿namespace Armoire.Features.ModDetails.UI;
 
 using Armoire.Core.Localization;
-using Armoire.Features.ConflictEngine;
 using Armoire.Features.ConflictEngine.Models;
-using Armoire.Features.GlamourerIpc;
-using Armoire.Features.ModDetails;
-using Armoire.Features.ModDetails.Models;
-using Armoire.Features.ModSwapper;
-using Armoire.Features.VanillaSearch.UI;
+using Armoire.Features.ModDetails.Presentation;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-public class ModDetailsWindow : IDisposable {
-    private readonly IModDetailsResolver resolver;
-    private readonly IPenumbraSyncManager syncManager;
+public class ModDetailsWindow {
     private readonly ILocalizationService loc;
     private readonly ITextureProvider textureProvider;
-    private readonly VanillaReplacementWindow vanillaWindow;
-    private readonly IModSwapperService swapperService;
-    private readonly IGlamourerClient glamourerClient;
-
-    public bool IsVisible { get; set; } = false;
-    private string currentModId = string.Empty;
-    private DetailedModState? currentState = null;
-    private EffectiveCollectionState? currentGlobalState = null;
-    private Dictionary<string, string> selectedTextureProviders = [];
+    private readonly IModDetailsPresenter presenter;
 
     public ModDetailsWindow(
-        IModDetailsResolver resolver,
-        IPenumbraSyncManager syncManager,
         ILocalizationService loc,
         ITextureProvider textureProvider,
-        VanillaReplacementWindow vanillaWindow,
-        IModSwapperService swapperService,
-        IGlamourerClient glamourerClient
-    ) {
-        this.resolver = resolver;
-        this.syncManager = syncManager;
+        IModDetailsPresenter presenter) {
         this.loc = loc;
         this.textureProvider = textureProvider;
-        this.vanillaWindow = vanillaWindow;
-        this.swapperService = swapperService;
-        this.glamourerClient = glamourerClient;
-
-        this.syncManager.OnStatusUpdated += RefreshData;
-    }
-
-    public void Open(string modId) {
-        this.currentModId = modId;
-        this.selectedTextureProviders.Clear();
-        this.syncManager.ForceRefresh();
-        this.IsVisible = true;
-    }
-
-    private void RefreshData(PenumbraStatusResult fullStatus) {
-        if (!this.IsVisible || string.IsNullOrEmpty(this.currentModId)) {
-            return;
-        }
+        this.presenter = presenter;
     }
 
     public void Draw(EffectiveCollectionState? globalState) {
-        if (!this.IsVisible) {
+        if (!this.presenter.IsVisible) {
             return;
         }
-        this.currentGlobalState = globalState;
 
-        if (!string.IsNullOrEmpty(this.currentModId) && globalState != null) {
-            this.currentState = this.resolver.ResolveModDetails(this.currentModId, globalState);
-        }
+        // Push latest state to the presenter
+        this.presenter.UpdateState(globalState);
 
-        bool windowOpen = this.IsVisible;
+        bool windowOpen = this.presenter.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(900, 650), ImGuiCond.FirstUseEver);
 
-        string modNameStr = this.currentState?.ModName ?? this.loc.GetString("ModDetails_Loading");
+        var currentState = this.presenter.CurrentState;
+        string modNameStr = currentState?.ModName ?? this.loc.GetString("ModDetails_Loading");
         string windowTitle = string.Format(this.loc.GetString("ModDetails_WindowTitle"), modNameStr) + "###ModDetails";
 
         if (ImGui.Begin(windowTitle, ref windowOpen)) {
             if (!windowOpen) {
-                this.IsVisible = false;
+                this.presenter.IsVisible = false;
             }
 
-            if (this.currentState == null) {
+            if (currentState == null) {
                 ImGui.Text(this.loc.GetString("ModDetails_Unavailable"));
                 ImGui.End();
                 return;
             }
 
-            string stateStr = this.currentState.IsEnabled ?
+            string stateStr = currentState.IsEnabled ?
                 this.loc.GetString("ModDetails_StateEnabled") : this.loc.GetString("ModDetails_StateDisabled");
-            ImGui.TextWrapped(string.Format(this.loc.GetString("ModDetails_Header"), this.currentState.Priority, stateStr));
+            ImGui.TextWrapped(string.Format(this.loc.GetString("ModDetails_Header"), currentState.Priority, stateStr));
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
             if (ImGui.BeginTabBar("ModDetailsTabs")) {
@@ -111,7 +69,6 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.EndTabBar();
             }
         }
-        this.vanillaWindow.Draw();
         ImGui.End();
     }
 
@@ -122,35 +79,26 @@ public class ModDetailsWindow : IDisposable {
             ImGui.TableSetupColumn("LeftEquipment", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("RightEquipment", ImGuiTableColumnFlags.WidthStretch);
 
-            // Row 1: Main Weapon | Off-Hand
             ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            DrawSpecificSlot("wpn", this.loc.GetString("Slot_MainHand"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("wpn", this.loc.GetString("Slot_MainHand"));
             ImGui.TableNextColumn(); DrawSpecificSlot("sub", this.loc.GetString("Slot_OffHand"));
 
-            // Row 2: Head | Earrings
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("met", this.loc.GetString("Slot_Head"));
             ImGui.TableNextColumn(); DrawSpecificSlot("ear", this.loc.GetString("Slot_Earrings"));
 
-            // Row 3: Body | Necklace
             ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            DrawSpecificSlot("top", this.loc.GetString("Slot_Body"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("top", this.loc.GetString("Slot_Body"));
             ImGui.TableNextColumn(); DrawSpecificSlot("nek", this.loc.GetString("Slot_Necklace"));
 
-            // Row 4: Hands | Bracelets
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("glv", this.loc.GetString("Slot_Hands"));
             ImGui.TableNextColumn(); DrawSpecificSlot("wrs", this.loc.GetString("Slot_Bracelets"));
 
-            // Row 5: Legs | Ring (Right)
             ImGui.TableNextRow();
-            ImGui.TableNextColumn();
-            DrawSpecificSlot("dwn", this.loc.GetString("Slot_Legs"));
+            ImGui.TableNextColumn(); DrawSpecificSlot("dwn", this.loc.GetString("Slot_Legs"));
             ImGui.TableNextColumn(); DrawSpecificSlot("rir", this.loc.GetString("Slot_RingRight"));
 
-            // Row 6: Feet | Ring (Left)
             ImGui.TableNextRow();
             ImGui.TableNextColumn(); DrawSpecificSlot("sho", this.loc.GetString("Slot_Feet"));
             ImGui.TableNextColumn(); DrawSpecificSlot("ril", this.loc.GetString("Slot_RingLeft"));
@@ -158,7 +106,6 @@ public class ModDetailsWindow : IDisposable {
             ImGui.EndTable();
         }
 
-        // Customization and System files
         ImGui.Spacing();
 
         DrawSpecificSlot("custom", "Customisation");
@@ -167,14 +114,17 @@ public class ModDetailsWindow : IDisposable {
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
         if (ImGui.Button("Réinitialiser le mod (Paramètres par défaut)")) {
-            if (this.currentState != null) {
-                this.swapperService.ResetMod(this.currentState.ModId);
-            }
+            this.presenter.ResetCurrentMod();
         }
     }
 
     private void DrawSpecificSlot(string slotKey, string slotDisplayName) {
-        var itemsInSlot = this.currentState!.ReplacedSlots
+        var currentState = this.presenter.CurrentState;
+        if (currentState == null) {
+            return;
+        }
+
+        var itemsInSlot = currentState.ReplacedSlots
             .Where(s => s.SlotCategory == slotKey)
             .GroupBy(s => new {
                 s.IconId,
@@ -190,12 +140,12 @@ public class ModDetailsWindow : IDisposable {
                     OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList(),
                     IsMissingTextures = g.Any(x => x.IsMissingTextures),
                     AvailableTextureProviders = first.AvailableTextureProviders,
-                    OriginalRef = first // Permet de conserver l'état de SelectedTextureProviderId
+                    OriginalRef = first
                 };
             })
             .ToList();
 
-        // CAS 1 : Aucun fichier du mod ne modifie cet emplacement
+        // CASE 1 : Empty slot
         if (!itemsInSlot.Any()) {
             if (slotKey == "custom" || slotKey == "unknown") {
                 return;
@@ -222,7 +172,7 @@ public class ModDetailsWindow : IDisposable {
             return;
         }
 
-        // CAS 2 : Le mod modifie cet emplacement
+        // CASE 2 : Modified slot
         foreach (var item in itemsInSlot) {
             ImGui.PushID(item.BaseName + item.IconId);
 
@@ -263,10 +213,10 @@ public class ModDetailsWindow : IDisposable {
             }
             ImGui.EndGroup();
 
-            // Menu contextuel (Glamourer)
+            // Glamourer Context Menu
             if (item.ItemId > 0 && ImGui.BeginPopupContextItem($"mod_ctx_{item.BaseName}_{item.IconId}")) {
                 if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
-                    this.glamourerClient.EquipItem(item.ItemId, slotKey);
+                    this.presenter.EquipItem(item.ItemId, slotKey);
                 }
                 ImGui.EndPopup();
             }
@@ -274,11 +224,9 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.SetTooltip("Clic-droit pour plus d'options");
             }
 
-            // Handle click to replace the item
-            if (selected && this.currentGlobalState != null && this.currentState != null) {
-                // Add '?' to string to safely handle null from TryGetValue
-                this.selectedTextureProviders.TryGetValue(slotKey, out string? providerIdToPass);
-                this.vanillaWindow.Open(slotKey, this.currentState.ModId, this.currentGlobalState, providerIdToPass ?? string.Empty);
+            // Handle click to open vanilla replacement
+            if (selected) {
+                this.presenter.OpenVanillaReplacement(slotKey, item.OriginalRef.SelectedTextureProviderId);
             }
 
             // Texture inheritance UI
@@ -286,14 +234,12 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indent to align with the text
                 ImGui.BeginGroup();
 
-                // Fix clipped text by using TextWrapped
                 ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.6f, 0.0f, 1.0f));
                 ImGui.TextWrapped(this.loc.GetString("ModDetails_MissingTexturesWarning"));
                 ImGui.PopStyleColor();
 
-                // Add '?' to string here as well to fix CS8600 warning
-                this.selectedTextureProviders.TryGetValue(slotKey, out string? selectedProviderId);
-                selectedProviderId ??= string.Empty;
+                // Retrieve the provider state through the presenter
+                string selectedProviderId = this.presenter.GetSelectedProvider(slotKey, item.OriginalRef.SelectedTextureProviderId);
 
                 string previewValue = string.IsNullOrEmpty(selectedProviderId)
                     ? this.loc.GetString("ModDetails_SelectProvider")
@@ -302,14 +248,13 @@ public class ModDetailsWindow : IDisposable {
                 ImGui.SetNextItemWidth(300f);
                 if (ImGui.BeginCombo($"##combo_tex_{item.BaseName}", previewValue)) {
                     if (ImGui.Selectable(this.loc.GetString("ModDetails_NoProvider"), string.IsNullOrEmpty(selectedProviderId))) {
-                        this.selectedTextureProviders[slotKey] = string.Empty;
+                        this.presenter.SetSelectedProvider(slotKey, string.Empty);
                     }
 
                     foreach (var provider in item.AvailableTextureProviders) {
                         bool isSelected = selectedProviderId == provider.Key;
                         if (ImGui.Selectable(provider.Value, isSelected)) {
-
-                            this.selectedTextureProviders[slotKey] = provider.Key;
+                            this.presenter.SetSelectedProvider(slotKey, provider.Key);
                         }
                         if (isSelected) {
                             ImGui.SetItemDefaultFocus();
@@ -326,6 +271,11 @@ public class ModDetailsWindow : IDisposable {
     }
 
     private void DrawAdvancedFilesView() {
+        var currentState = this.presenter.CurrentState;
+        if (currentState == null) {
+            return;
+        }
+
         ImGui.Spacing();
 
         if (ImGui.BeginTable("ModDetailsTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
@@ -336,7 +286,7 @@ public class ModDetailsWindow : IDisposable {
             ImGui.TableSetupColumn(this.loc.GetString("ModDetails_ColWinner"), ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableHeadersRow();
 
-            foreach (var slot in this.currentState!.ReplacedSlots) {
+            foreach (var slot in currentState.ReplacedSlots) {
                 ImGui.TableNextRow();
 
                 ImGui.TableNextColumn();
@@ -368,9 +318,5 @@ public class ModDetailsWindow : IDisposable {
             }
             ImGui.EndTable();
         }
-    }
-
-    public void Dispose() {
-        this.syncManager.OnStatusUpdated -= RefreshData;
     }
 }

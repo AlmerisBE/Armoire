@@ -8,7 +8,7 @@ using Armoire.Features.ModDetails.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions; // Ajout nécessaire pour la Regex
+using System.Text.RegularExpressions;
 
 public interface IModDetailsResolver {
     DetailedModState? ResolveModDetails(string modId, EffectiveCollectionState currentState);
@@ -18,14 +18,15 @@ public class ModDetailsResolver : IModDetailsResolver {
     private readonly IModScannerManager scannerManager;
     private readonly IGameDataService gameDataService;
     private readonly ILocalizationService loc;
+    private readonly ArmoireConfiguration config;
 
-    // Expression régulière pour extraire l'ID du modèle (ex: e0521, w0101)
     private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    public ModDetailsResolver(IModScannerManager scannerManager, IGameDataService gameDataService, ILocalizationService loc) {
+    public ModDetailsResolver(IModScannerManager scannerManager, IGameDataService gameDataService, ILocalizationService loc, ArmoireConfiguration config) {
         this.scannerManager = scannerManager;
         this.gameDataService = gameDataService;
         this.loc = loc;
+        this.config = config;
     }
 
     public DetailedModState? ResolveModDetails(string modId, EffectiveCollectionState currentState) {
@@ -46,12 +47,28 @@ public class ModDetailsResolver : IModDetailsResolver {
 
         var targetPaths = GetActivePathsForMod(cachedMod, activeModSettings.Settings);
 
+        // --- GLOBAL TEXTURE PRESENCE DETECTION ---
+        // We evaluate if the mod as a whole contains materials/textures for its models
+        var allModelIdsWithMdl = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var allModelIdsWithTex = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var p in targetPaths) {
+            var match = this.modelIdRegex.Match(p);
+            if (match.Success) {
+                if (p.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase)) {
+                    allModelIdsWithMdl.Add(match.Value);
+                } else if (p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)) {
+                    allModelIdsWithTex.Add(match.Value);
+                }
+            }
+        }
+        // -----------------------------------------
+
         var higherPriorityMods = currentState.EffectiveMods.Values
             .Where(m => m.IsEnabled && m.Priority > activeModSettings.Priority)
             .OrderByDescending(m => m.Priority)
             .ToList();
 
-        // 1. Collect all raw slots first
         var rawSlots = new List<DetailedSlotState>();
 
         foreach (var path in targetPaths) {
@@ -81,16 +98,22 @@ public class ModDetailsResolver : IModDetailsResolver {
             rawSlots.Add(slotState);
         }
 
-        // 2. Group slots by LocalizedItemName, IsConflicting, and the exact winners
         result.ReplacedSlots = rawSlots
             .GroupBy(s => new { s.LocalizedItemName, s.IsConflicting, Winners = string.Join(",", s.OverwrittenByMods), s.IconId, s.SlotCategory })
             .Select(g => {
                 var paths = g.SelectMany(x => x.AffectedPaths).Distinct().ToList();
 
-                // --- LOGIQUE DE DÉTECTION D'HÉRITAGE DE TEXTURES ---
-                bool hasMdl = paths.Any(p => p.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase));
-                bool hasTex = paths.Any(p => p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase));
-                bool isMissingTextures = hasMdl && !hasTex;
+                var modelIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var p in paths) {
+                    var match = this.modelIdRegex.Match(p);
+                    if (match.Success) {
+                        modelIds.Add(match.Value);
+                    }
+                }
+
+                // An item group is flagged as missing textures ONLY IF its base model ID 
+                // has a 3D model (.mdl) but absolutely NO materials or textures anywhere in the entire mod.
+                bool isMissingTextures = modelIds.Any(mId => allModelIdsWithMdl.Contains(mId) && !allModelIdsWithTex.Contains(mId));
 
                 var slotState = new DetailedSlotState {
                     LocalizedItemName = g.Key.LocalizedItemName,
@@ -103,17 +126,14 @@ public class ModDetailsResolver : IModDetailsResolver {
                     IsMissingTextures = isMissingTextures
                 };
 
-                // Si le mod est incomplet, on cherche les fournisseurs potentiels
-                if (isMissingTextures) {
-                    var modelIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var p in paths) {
-                        var match = this.modelIdRegex.Match(p);
-                        if (match.Success) {
-                            modelIds.Add(match.Value);
-                        }
-                    }
+                // Load persistent texture provider selection from configuration if it exists
+                if (this.config.ModifiedMods.TryGetValue(modId, out var modEntry) &&
+                    modEntry.TextureProviders.TryGetValue(g.Key.SlotCategory, out var savedProviderId)) {
+                    slotState.SelectedTextureProviderId = savedProviderId;
+                }
 
-                    // Parcourir tous les autres mods actifs de la collection
+                // Search for potential providers only if genuinely missing textures
+                if (isMissingTextures) {
                     foreach (var otherMod in currentState.EffectiveMods.Values) {
                         if (!otherMod.IsEnabled || otherMod.Id == modId) {
                             continue;
@@ -122,7 +142,6 @@ public class ModDetailsResolver : IModDetailsResolver {
                         if (this.scannerManager.ModCache.TryGetValue(otherMod.Id, out var otherCache)) {
                             var otherPaths = GetActivePathsForMod(otherCache, otherMod.Settings);
 
-                            // Un mod est un fournisseur s'il contient un .mtrl ou .tex qui mentionne le même Model ID (ex: e0521)
                             bool providesTexture = otherPaths.Any(p =>
                                 (p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)) &&
                                 modelIds.Any(mId => p.Contains(mId, StringComparison.OrdinalIgnoreCase))

@@ -9,6 +9,7 @@ using Armoire.Features.LocalScanner;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.ModDetails;
+using Armoire.Features.ModDetails.Presentation;
 using Armoire.Features.ModDetails.UI;
 using Armoire.Features.ModSwapper;
 using Armoire.Features.PenumbraIpc;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Armoire.Core.DI;
 
 public static class ServiceConfigurator {
+
     public static ServiceProvider ConfigureServices(
         IDalamudPluginInterface pluginInterface,
         IPluginLog pluginLog,
@@ -34,7 +36,29 @@ public static class ServiceConfigurator {
         ArmoireConfiguration configuration) {
         var services = new ServiceCollection();
 
-        // 1. Dalamud native services
+        // The main configuration acts as a clean, readable table of contents
+        RegisterDalamudServices(services, pluginInterface, pluginLog, commandManager, objectTable, framework, notificationManager, clientState, dataManager, textureProvider);
+        RegisterCoreInfrastructure(services, configuration);
+        RegisterExternalIntegrations(services);
+        RegisterFeatureServices(services);
+        RegisterPresenters(services);
+        RegisterUiComponents(services);
+        RegisterCommands(services);
+
+        return services.BuildServiceProvider();
+    }
+
+    private static void RegisterDalamudServices(
+        IServiceCollection services,
+        IDalamudPluginInterface pluginInterface,
+        IPluginLog pluginLog,
+        ICommandManager commandManager,
+        IObjectTable objectTable,
+        IFramework framework,
+        INotificationManager notificationManager,
+        IClientState clientState,
+        IDataManager dataManager,
+        ITextureProvider textureProvider) {
         services.AddSingleton(pluginInterface);
         services.AddSingleton(pluginLog);
         services.AddSingleton(commandManager);
@@ -44,39 +68,48 @@ public static class ServiceConfigurator {
         services.AddSingleton(clientState);
         services.AddSingleton(dataManager);
         services.AddSingleton(textureProvider);
-        services.AddSingleton(configuration);
+    }
 
-        // 2. Core services
+    private static void RegisterCoreInfrastructure(IServiceCollection services, ArmoireConfiguration configuration) {
+        services.AddSingleton(configuration);
         services.AddSingleton<IRuntimeEnvironment, RuntimeEnvironment>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
-        services.AddSingleton<IGameDataService, GameDataService>();
-        services.AddSingleton<ConfigWindow>();
-        services.AddSingleton<MainWindow>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<CommandRegistry>();
-        services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
-        services.AddSingleton<IModSwapperService, ModSwapperService>();
+    }
 
-        // 3. Features dependencies (Penumbra, Glamourer)
+    private static void RegisterExternalIntegrations(IServiceCollection services) {
         services.AddSingleton<IPenumbraClient, PenumbraClient>();
+        services.AddSingleton<IGlamourerClient, GlamourerClient>();
+    }
+
+    private static void RegisterFeatureServices(IServiceCollection services) {
+        services.AddSingleton<IGameDataService, GameDataService>();
         services.AddSingleton<IPenumbraRepository, PenumbraRepository>();
         services.AddSingleton<IPenumbraAnalyzer, PenumbraAnalyzer>();
         services.AddSingleton<IPenumbraSyncManager, PenumbraSyncManager>();
         services.AddSingleton<IModScannerManager, ModScannerManager>();
-        services.AddSingleton<IGlamourerClient, GlamourerClient>();
+        services.AddSingleton<IModDetailsResolver, ModDetailsResolver>();
+        services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
+        services.AddSingleton<IModSwapperService, ModSwapperService>();
+    }
 
-        // Section UI Penumbra
+    private static void RegisterPresenters(IServiceCollection services) {
+        services.AddSingleton<IModDetailsPresenter, ModDetailsPresenter>();
+        services.AddSingleton<PenumbraStatusPresenter>();
+    }
+
+    private static void RegisterUiComponents(IServiceCollection services) {
+        services.AddSingleton<ConfigWindow>();
+        services.AddSingleton<MainWindow>();
         services.AddSingleton<ModScannerWindow>();
         services.AddSingleton<ConflictListWindow>();
-        services.AddSingleton<PenumbraStatusPresenter>();
-        services.AddSingleton<IUiComponent, PenumbraStatusView>();
-        services.AddSingleton<IModDetailsResolver, ModDetailsResolver>();
         services.AddSingleton<ModDetailsWindow>();
         services.AddSingleton<VanillaReplacementWindow>();
+        services.AddSingleton<IUiComponent, PenumbraStatusView>();
+    }
 
-        // 4. Commands
+    private static void RegisterCommands(IServiceCollection services) {
         services.AddSingleton<IPluginCommand, MainCommand>();
-
-        return services.BuildServiceProvider();
     }
 }
