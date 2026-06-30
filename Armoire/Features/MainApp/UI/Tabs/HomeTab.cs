@@ -39,30 +39,31 @@ public class HomeTab {
             ImGui.Spacing();
 
             // Active remaining conflicts list
-            if (ImGui.BeginTable("ConflictsTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
+            // Reduced to 3 columns: Victim, Winners, and Action Button
+            if (ImGui.BeginTable("ConflictsTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
                 ImGui.TableSetupScrollFreeze(0, 1);
                 ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColVictim"), ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColSlots"), ImGuiTableColumnFlags.WidthFixed, 150f);
                 ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColWinners"), ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColPriority"), ImGuiTableColumnFlags.WidthFixed, 60f);
+                ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColAction"), ImGuiTableColumnFlags.WidthFixed, 150f);
                 ImGui.TableHeadersRow();
 
                 foreach (var mod in this.presenter.CurrentConflicts) {
                     ImGui.TableNextRow();
 
+                    // Column 1: Victim Mod Name
                     ImGui.TableNextColumn();
-                    if (ImGui.Selectable($"{mod.Name}##{mod.Id}", false, ImGuiSelectableFlags.SpanAllColumns)) {
-                        this.presenter.OpenConflictResolution(mod.Id);
-                    }
+                    ImGui.TextUnformatted(mod.Name);
 
-                    ImGui.TableNextColumn();
-                    ImGui.TextWrapped(string.Join(", ", mod.ConflictingSlots));
-
+                    // Column 2: Overwritten By (Winners)
                     ImGui.TableNextColumn();
                     ImGui.TextColored(new Vector4(1.0f, 0.4f, 0.0f, 1.0f), string.Join(", ", mod.OverwrittenBy));
 
+                    // Column 3: Resolution Action Button
                     ImGui.TableNextColumn();
-                    ImGui.TextUnformatted(mod.Priority.ToString());
+                    if (ImGui.Button($"{this.loc.GetString("Main_HomeResolveBtn")}##{mod.Id}")) {
+                        // Triggers the opening of the ModDetailsWindow via the presenter
+                        this.presenter.OpenConflictResolution(mod.Id);
+                    }
                 }
                 ImGui.EndTable();
             }

@@ -5,6 +5,7 @@ using Armoire.Core.UI;
 using Armoire.Features.DiagnosticsUI.Presentation;
 using Armoire.Features.MainApp.Presentation;
 using Armoire.Features.MainApp.UI;
+using Armoire.Features.MainApp.UI.Tabs;
 using NSubstitute;
 using Xunit;
 
@@ -16,11 +17,32 @@ public class WindowManagerTests {
         var mockMainPresenter = Substitute.For<IMainWindowPresenter>();
         var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
 
-        // Inject the newly required presenter mocks into the MainWindow constructor
-        var mainWindow = new MainWindow(mockLocalization, mockMainPresenter, mockStatusPresenter);
+        var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
+        var resolvedTab = new ResolvedTab(mockLocalization, mockMainPresenter);
+        var statsTab = new StatsTab(mockLocalization, mockMainPresenter, mockStatusPresenter);
+        var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
+        var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
+
+        var mainWindow = new MainWindow(
+            mockLocalization,
+            mockMainPresenter,
+            homeTab,
+            resolvedTab,
+            statsTab,
+            configTab,
+            aboutTab
+        );
+
         var configWindow = new ConfigWindow();
 
-        var windowManager = new WindowManager(mainWindow, configWindow);
+        // Inject null! for the standalone windows since they are completely irrelevant to this test
+        var windowManager = new WindowManager(
+            mainWindow,
+            configWindow,
+            null!, // modDetailsWindow
+            null!, // vanillaReplacementWindow
+            null!  // modScannerWindow
+        );
 
         var initialState = configWindow.IsOpen;
 

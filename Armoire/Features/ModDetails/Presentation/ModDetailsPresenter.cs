@@ -56,15 +56,6 @@ public class ModDetailsPresenter : IModDetailsPresenter {
         this.IsVisible = true;
     }
 
-    public void UpdateState(EffectiveCollectionState? globalState) {
-        this.currentGlobalState = globalState;
-
-        // Resolve mod details if the window is open and state is available
-        if (this.IsVisible && !string.IsNullOrEmpty(this.currentModId) && globalState != null) {
-            this.CurrentState = this.resolver.ResolveModDetails(this.currentModId, globalState);
-        }
-    }
-
     public void ResetCurrentMod() {
         if (this.CurrentState != null) {
             string targetId = this.CurrentState.ModId;
@@ -116,8 +107,12 @@ public class ModDetailsPresenter : IModDetailsPresenter {
     }
 
     private void RefreshData(PenumbraStatusResult fullStatus) {
-        if (!this.IsVisible || string.IsNullOrEmpty(this.currentModId)) {
-            return;
+        // Automatically cache the latest global state from Penumbra
+        this.currentGlobalState = fullStatus?.GlobalState;
+
+        // Resolve mod details dynamically if the window is open
+        if (this.IsVisible && !string.IsNullOrEmpty(this.currentModId) && this.currentGlobalState != null) {
+            this.CurrentState = this.resolver.ResolveModDetails(this.currentModId, this.currentGlobalState);
         }
     }
 

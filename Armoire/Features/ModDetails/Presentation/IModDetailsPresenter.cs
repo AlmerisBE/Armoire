@@ -1,6 +1,5 @@
 ﻿namespace Armoire.Features.ModDetails.Presentation;
 
-using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.ModDetails.Models;
 using System;
 
@@ -15,11 +14,6 @@ public interface IModDetailsPresenter : IDisposable {
     /// Opens the details view for a specific mod.
     /// </summary>
     void Open(string modId);
-
-    /// <summary>
-    /// Updates the presenter with the latest global state from the conflict engine.
-    /// </summary>
-    void UpdateState(EffectiveCollectionState? globalState);
 
     /// <summary>
     /// Resets the currently displayed mod to its default settings.

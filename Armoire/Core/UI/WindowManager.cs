@@ -1,42 +1,64 @@
+namespace Armoire.Core.UI;
+
+using Armoire.Features.DiagnosticsUI;
 using Armoire.Features.MainApp.UI;
+using Armoire.Features.ModDetails.UI;
+using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Interface.Windowing;
 using System;
-
-namespace Armoire.Core.UI;
 
 public class WindowManager : IWindowManager, IDisposable {
     private readonly MainWindow mainWindow;
     private readonly ConfigWindow configWindow;
+
+    private readonly ModDetailsWindow modDetailsWindow;
+    private readonly VanillaReplacementWindow vanillaReplacementWindow;
+    private readonly ModScannerWindow modScannerWindow;
+
     private readonly WindowSystem windowSystem;
 
-    public WindowManager(MainWindow mainWindow, ConfigWindow configWindow) {
+    public WindowManager(
+        MainWindow mainWindow,
+        ConfigWindow configWindow,
+        ModDetailsWindow modDetailsWindow,
+        VanillaReplacementWindow vanillaReplacementWindow,
+        ModScannerWindow modScannerWindow) {
         this.mainWindow = mainWindow;
         this.configWindow = configWindow;
+        this.modDetailsWindow = modDetailsWindow;
+        this.vanillaReplacementWindow = vanillaReplacementWindow;
+        this.modScannerWindow = modScannerWindow;
 
-        windowSystem = new WindowSystem("ArmoireWindowSystem");
-        windowSystem.AddWindow(this.mainWindow);
-        windowSystem.AddWindow(this.configWindow);
+        this.windowSystem = new WindowSystem("ArmoireWindowSystem");
+        this.windowSystem.AddWindow(this.mainWindow);
+        this.windowSystem.AddWindow(this.configWindow);
 
         this.mainWindow.OnConfigRequested += ToggleConfigWindow;
     }
 
-    public void ToggleMainWindow() {
-        mainWindow.IsOpen = !mainWindow.IsOpen;
-    }
-
-    public void ToggleConfigWindow() {
-        configWindow.IsOpen = !configWindow.IsOpen;
-    }
+    public void ToggleMainWindow() => mainWindow.IsOpen = !mainWindow.IsOpen;
+    public void ToggleConfigWindow() => configWindow.IsOpen = !configWindow.IsOpen;
 
     public void Draw() {
-        windowSystem.Draw();
+        // 1. Draw standard Dalamud WindowSystem windows (Main & Config)
+        this.windowSystem.Draw();
+
+        // 2. Draw independent MVP views
+        this.modDetailsWindow.Draw();
+        this.vanillaReplacementWindow.Draw();
+        this.modScannerWindow.Draw();
     }
 
     public void Dispose() {
-        mainWindow.OnConfigRequested -= ToggleConfigWindow;
+        this.mainWindow.OnConfigRequested -= ToggleConfigWindow;
+        this.windowSystem.RemoveAllWindows();
 
-        windowSystem.RemoveAllWindows();
-        mainWindow.Dispose();
-        configWindow.Dispose();
+        if (this.mainWindow is IDisposable dm) {
+            dm.Dispose();
+        }
+
+        if (this.configWindow is IDisposable dc) {
+            dc.Dispose();
+        }
     }
 }

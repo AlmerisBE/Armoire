@@ -1,7 +1,6 @@
 ﻿namespace Armoire.Features.ModDetails.UI;
 
 using Armoire.Core.Localization;
-using Armoire.Features.ConflictEngine.Models;
 using Armoire.Features.ModDetails.Presentation;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -23,13 +22,10 @@ public class ModDetailsWindow {
         this.presenter = presenter;
     }
 
-    public void Draw(EffectiveCollectionState? globalState) {
+    public void Draw() {
         if (!this.presenter.IsVisible) {
             return;
         }
-
-        // Push latest state to the presenter
-        this.presenter.UpdateState(globalState);
 
         bool windowOpen = this.presenter.IsVisible;
         ImGui.SetNextWindowSize(new Vector2(900, 650), ImGuiCond.FirstUseEver);
