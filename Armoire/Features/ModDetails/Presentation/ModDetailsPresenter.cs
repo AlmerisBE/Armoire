@@ -6,7 +6,7 @@ using Armoire.Features.GlamourerIpc;
 using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Models;
 using Armoire.Features.ModSwapper;
-using Armoire.Features.VanillaSearch.UI;
+using Armoire.Features.VanillaSearch.Presentation;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,7 +15,7 @@ public class ModDetailsPresenter : IModDetailsPresenter {
     private readonly IPenumbraSyncManager syncManager;
     private readonly IModSwapperService swapperService;
     private readonly IGlamourerClient glamourerClient;
-    private readonly VanillaReplacementWindow vanillaWindow;
+    private readonly IVanillaReplacementPresenter vanillaPresenter;
 
     public bool IsVisible { get; set; } = false;
     public DetailedModState? CurrentState { get; private set; }
@@ -31,12 +31,12 @@ public class ModDetailsPresenter : IModDetailsPresenter {
         IPenumbraSyncManager syncManager,
         IModSwapperService swapperService,
         IGlamourerClient glamourerClient,
-        VanillaReplacementWindow vanillaWindow) {
+        IVanillaReplacementPresenter vanillaPresenter) {
         this.resolver = resolver;
         this.syncManager = syncManager;
         this.swapperService = swapperService;
         this.glamourerClient = glamourerClient;
-        this.vanillaWindow = vanillaWindow;
+        this.vanillaPresenter = vanillaPresenter;
 
         this.syncManager.OnStatusUpdated += RefreshData;
     }
@@ -90,7 +90,7 @@ public class ModDetailsPresenter : IModDetailsPresenter {
             if (!this.selectedTextureProviders.TryGetValue(cacheKey, out string? providerIdToPass)) {
                 providerIdToPass = originalProviderId;
             }
-            this.vanillaWindow.Open(slotKey, this.CurrentState.ModId, this.currentGlobalState, providerIdToPass ?? string.Empty);
+            this.vanillaPresenter.Open(slotKey, this.CurrentState.ModId, this.currentGlobalState, providerIdToPass ?? string.Empty);
         }
     }
 

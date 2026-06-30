@@ -14,6 +14,7 @@ using Armoire.Features.ModDetails.UI;
 using Armoire.Features.ModSwapper;
 using Armoire.Features.PenumbraIpc;
 using Armoire.Features.VanillaSearch;
+using Armoire.Features.VanillaSearch.Presentation;
 using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -96,6 +97,7 @@ public static class ServiceConfigurator {
 
     private static void RegisterPresenters(IServiceCollection services) {
         services.AddSingleton<IModDetailsPresenter, ModDetailsPresenter>();
+        services.AddSingleton<IVanillaReplacementPresenter, VanillaReplacementPresenter>();
         services.AddSingleton<PenumbraStatusPresenter>();
     }
 
