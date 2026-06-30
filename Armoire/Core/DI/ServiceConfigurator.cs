@@ -7,6 +7,7 @@ using Armoire.Features.DiagnosticsUI.Presentation;
 using Armoire.Features.GameData;
 using Armoire.Features.GlamourerIpc;
 using Armoire.Features.LocalScanner;
+using Armoire.Features.LocalScanner.Presentation;
 using Armoire.Features.MainApp.Commands;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.ModDetails;
@@ -100,6 +101,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IModDetailsPresenter, ModDetailsPresenter>();
         services.AddSingleton<IVanillaReplacementPresenter, VanillaReplacementPresenter>();
         services.AddSingleton<IConflictListPresenter, ConflictListPresenter>();
+        services.AddSingleton<IModScannerPresenter, ModScannerPresenter>();
         services.AddSingleton<PenumbraStatusPresenter>();
     }
 

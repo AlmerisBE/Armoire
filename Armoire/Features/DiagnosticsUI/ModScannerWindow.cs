@@ -1,100 +1,81 @@
 ﻿namespace Armoire.Features.DiagnosticsUI;
 
 using Armoire.Core.Localization;
-using Armoire.Features.LocalScanner;
-using Armoire.Features.LocalScanner.Models;
+using Armoire.Features.LocalScanner.Presentation;
 using Dalamud.Bindings.ImGui;
 using System.Numerics;
 
 public class ModScannerWindow {
-    private readonly IModScannerManager scannerManager;
     private readonly ILocalizationService loc;
-    public bool IsVisible { get; set; } = false;
+    private readonly IModScannerPresenter presenter;
 
-    public ModScannerWindow(IModScannerManager scannerManager, ILocalizationService localizationService) {
-        this.scannerManager = scannerManager;
-        this.loc = localizationService;
-    }
-
-    public void Open(int ipcModCount) {
-        this.scannerManager.InitializeScanProgress(ipcModCount);
-        this.IsVisible = true;
+    public ModScannerWindow(ILocalizationService loc, IModScannerPresenter presenter) {
+        this.loc = loc;
+        this.presenter = presenter;
     }
 
     public void Draw() {
-        if (!this.IsVisible) {
+        if (!this.presenter.IsVisible) {
             return;
         }
 
-        if (this.scannerManager.State == ScanState.Idle &&
-            this.scannerManager.TotalMods > 0 &&
-            this.scannerManager.ProcessedMods >= this.scannerManager.TotalMods) {
-            this.IsVisible = false;
-            return;
-        }
-
-        bool windowOpen = this.IsVisible;
-        ImGui.SetNextWindowSize(new Vector2(450, 220), ImGuiCond.FirstUseEver);
+        bool windowOpen = this.presenter.IsVisible;
+        ImGui.SetNextWindowSize(new Vector2(500, 250), ImGuiCond.FirstUseEver);
 
         if (ImGui.Begin(this.loc.GetString("Scanner_WindowTitle"), ref windowOpen, ImGuiWindowFlags.NoCollapse)) {
+            // If the user clicks the red X, we cancel the scan to be safe
             if (!windowOpen) {
-                this.scannerManager.CancelScan();
-                this.IsVisible = false;
+                this.presenter.CancelScan();
+                return;
             }
 
             ImGui.TextWrapped(this.loc.GetString("Scanner_RulesText"));
-            ImGui.Separator();
+            ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
-            int total = this.scannerManager.TotalMods;
-            int processed = this.scannerManager.ProcessedMods;
-            float progress = total > 0 ? (float)processed / total : 0f;
+            // Progress tracking
+            ImGui.TextUnformatted(string.Format(this.loc.GetString("Scanner_Progress"), this.presenter.ScannedCount, this.presenter.TotalCount));
 
-            ImGui.Text(string.Format(this.loc.GetString("Scanner_Progress"), processed, total));
-            ImGui.ProgressBar(progress, new Vector2(-1, 20), $"{(progress * 100):0.0}%");
+            float fraction = this.presenter.TotalCount > 0
+                ? (float)this.presenter.ScannedCount / this.presenter.TotalCount
+                : 0f;
 
-            if (this.scannerManager.ErrorCount > 0) {
-                ImGui.TextColored(new Vector4(1, 0, 0, 1), string.Format(this.loc.GetString("Scanner_IgnoredErrors"), this.scannerManager.ErrorCount));
-            }
-
+            ImGui.ProgressBar(fraction, new Vector2(-1, 24), $"{fraction * 100:0.0}%");
             ImGui.Spacing();
 
-            if (this.scannerManager.State == ScanState.Idle) {
-                if (ImGui.Button(this.loc.GetString("Scanner_BtnStart"))) {
-                    _ = this.scannerManager.StartScanAsync();
-                }
-            } else if (this.scannerManager.State == ScanState.Scanning) {
-                if (ImGui.Button(this.loc.GetString("Scanner_BtnPause"))) {
-                    this.scannerManager.PauseScan();
-                }
-            } else if (this.scannerManager.State == ScanState.Paused) {
-                if (ImGui.Button(this.loc.GetString("Scanner_BtnResume"))) {
-                    this.scannerManager.ResumeScan();
-                }
+            if (this.presenter.IgnoredErrorsCount > 0) {
+                ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Scanner_IgnoredErrors"), this.presenter.IgnoredErrorsCount));
+                ImGui.Spacing();
             }
 
-            ImGui.SameLine();
+            ImGui.Separator(); ImGui.Spacing();
 
-            if (this.scannerManager.State != ScanState.Idle) {
-                if (ImGui.Button(this.loc.GetString("Scanner_BtnCancel"))) {
-                    this.scannerManager.CancelScan();
-                    this.IsVisible = false;
+            // Action Buttons
+            if (!this.presenter.IsScanning) {
+                if (ImGui.Button(this.loc.GetString("Scanner_BtnStart"))) {
+                    this.presenter.StartScan();
                 }
+            } else {
+                if (this.presenter.IsPaused) {
+                    if (ImGui.Button(this.loc.GetString("Scanner_BtnResume"))) {
+                        this.presenter.ResumeScan();
+                    }
+                } else {
+                    if (ImGui.Button(this.loc.GetString("Scanner_BtnPause"))) {
+                        this.presenter.PauseScan();
+                    }
+                }
+
                 ImGui.SameLine();
                 if (ImGui.Button(this.loc.GetString("Scanner_BtnBackground"))) {
-                    this.IsVisible = false;
+                    this.presenter.CloseToBackground();
+                }
+
+                ImGui.SameLine();
+                if (ImGui.Button(this.loc.GetString("Scanner_BtnCancel"))) {
+                    this.presenter.CancelScan();
                 }
             }
         }
         ImGui.End();
-    }
-
-    public float GetScanProgress() {
-        int total = this.scannerManager.TotalMods;
-        int processed = this.scannerManager.ProcessedMods;
-        return total > 0 ? (float)processed / total : 0f;
-    }
-
-    public bool IsScanning() {
-        return this.scannerManager.State == ScanState.Scanning;
     }
 }
