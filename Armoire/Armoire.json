@@ -1,12 +1,13 @@
 {
   "Author": "Almeris",
   "Name": "Armoire",
-  "Punchline": "Armoire helps you manage your outfits.",
-  "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
+  "InternalName": "Armoire",
+  "AssemblyVersion": "0.1.0.0",
+  "Description": "Gestionnaire de tenues et résolution de conflits pour Penumbra.",
   "ApplicableVersion": "any",
-  "Tags": [
-    "armoire",
-    "plugin",
-    "almeris"
-  ]
+  "DalamudApiLevel": 11,
+  "LoadRequiredState": 0,
+  "LoadSync": false,
+  "LoadPriority": 0,
+  "Punchline": "Gérez vos conflits de mods en toute simplicité."
 }
