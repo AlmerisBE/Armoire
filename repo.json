@@ -11,8 +11,8 @@
     "LoadSync": false,
     "LoadPriority": 0,
     "Punchline": "Gérez vos conflits de mods en toute simplicité.",
-    "DownloadLinkInstall": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip",
-    "DownloadLinkTesting": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip"
+    "DownloadLinkInstall": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.2/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.2/latest.zip",
+    "DownloadLinkTesting": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.2/latest.zip"
   }
 ]
