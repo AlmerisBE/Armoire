@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: # Permet de lancer l'action avec un bouton manuellement sur GitHub
+  workflow_dispatch:
 
 jobs:
   build-and-release:
@@ -20,19 +20,17 @@ jobs:
           dotnet-version: '10.x'
 
       - name: Téléchargement des dépendances Dalamud
-        uses: goatcorp/setup-dalamud@v3
-        with:
-          branch: 'v11'
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
 
       - name: Restauration des dépendances
         run: dotnet restore
 
       - name: Compilation en configuration Release
-        # On utilise le SDK officiel qui gérera les chemins automatiquement
         run: dotnet build --configuration Release --no-restore
 
       - name: Préparation de l'archive ZIP
-        # On récupère le résultat de la compilation pour le zipper
         run: |
           Compress-Archive -Path "Armoire/bin/Release/Armoire/*" -DestinationPath "latest.zip" -Force
 
