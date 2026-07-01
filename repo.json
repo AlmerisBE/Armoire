@@ -1,0 +1,18 @@
+[
+  {
+    "Author": "Almeris",
+    "Name": "Armoire",
+    "InternalName": "Armoire",
+    "AssemblyVersion": "0.1.0.1",
+    "Description": "Gestionnaire de tenues et résolution de conflits pour Penumbra.",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 11,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "LoadPriority": 0,
+    "Punchline": "Gérez vos conflits de mods en toute simplicité.",
+    "DownloadLinkInstall": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip",
+    "DownloadLinkTesting": "https://github.com/AlmerisBE/Armoire/releases/download/v0.1.0.1/latest.zip"
+  }
+]
