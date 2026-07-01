@@ -73,13 +73,14 @@ public class ModDetailsResolver : IModDetailsResolver {
 
         foreach (var path in targetPaths) {
             var resolvedData = this.gameDataService.ResolveItem(path);
-
             var slotState = new DetailedSlotState {
                 AffectedPaths = new List<string> { path },
                 LocalizedItemName = resolvedData.Name,
                 IconId = resolvedData.IconId,
                 ItemId = resolvedData.ItemId,
-                SlotCategory = resolvedData.SlotKey
+                SlotCategory = resolvedData.SlotKey,
+                EquipLevel = resolvedData.EquipLevel,
+                ItemLevel = resolvedData.ItemLevel
             };
 
             foreach (var enemy in higherPriorityMods) {
@@ -99,7 +100,7 @@ public class ModDetailsResolver : IModDetailsResolver {
         }
 
         result.ReplacedSlots = rawSlots
-            .GroupBy(s => new { s.LocalizedItemName, s.IsConflicting, Winners = string.Join(",", s.OverwrittenByMods), s.IconId, s.SlotCategory })
+            .GroupBy(s => new { s.LocalizedItemName, s.IsConflicting, Winners = string.Join(",", s.OverwrittenByMods), s.IconId, s.SlotCategory, s.EquipLevel, s.ItemLevel })
             .Select(g => {
                 var paths = g.SelectMany(x => x.AffectedPaths).Distinct().ToList();
 
@@ -123,7 +124,9 @@ public class ModDetailsResolver : IModDetailsResolver {
                     IsConflicting = g.Key.IsConflicting,
                     OverwrittenByMods = g.First().OverwrittenByMods,
                     AffectedPaths = paths,
-                    IsMissingTextures = isMissingTextures
+                    IsMissingTextures = isMissingTextures,
+                    EquipLevel = g.Key.EquipLevel,
+                    ItemLevel = g.Key.ItemLevel
                 };
 
                 // Load persistent texture provider selection from configuration if it exists

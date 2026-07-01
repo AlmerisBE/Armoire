@@ -7,4 +7,6 @@ public class VanillaItem {
     public ushort IconId { get; set; }
     public string ExpansionName { get; set; } = string.Empty;
     public string Origin { get; set; } = string.Empty;
+    public byte EquipLevel { get; set; }
+    public uint ItemLevel { get; set; }
 }

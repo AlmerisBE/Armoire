@@ -13,6 +13,8 @@ public class DetailedSlotState {
     public bool IsMissingTextures { get; set; }
     public Dictionary<string, string> AvailableTextureProviders { get; set; } = [];
     public string SelectedTextureProviderId { get; set; } = string.Empty;
+    public byte EquipLevel { get; set; }
+    public uint ItemLevel { get; set; }
 }
 
 public class DetailedModState {

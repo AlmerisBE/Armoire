@@ -70,11 +70,13 @@ public class VanillaSearchService : IVanillaSearchService {
 
             results.Add(new VanillaItem {
                 ItemId = item.RowId,
-                Name = item.Name.ExtractText(),
+                Name = item.Name.ExtractText(), // Keep pure raw name string
                 ModelId = modelId,
                 IconId = item.Icon,
                 ExpansionName = GetExpansionName(item.LevelEquip),
-                Origin = DeduceItemOrigin(item)
+                Origin = DeduceItemOrigin(item),
+                EquipLevel = item.LevelEquip,
+                ItemLevel = item.LevelItem.RowId
             });
         }
 

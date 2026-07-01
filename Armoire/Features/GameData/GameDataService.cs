@@ -12,7 +12,7 @@ public class GameDataService : IGameDataService {
     private readonly IPluginLog pluginLog;
     private readonly ILocalizationService loc;
 
-    private readonly Dictionary<string, (string Name, uint IconId, uint ItemId)> equipmentModelCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (string Name, uint IconId, uint ItemId, byte EquipLevel, uint ItemLevel)> equipmentModelCache = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly Regex equipmentPathRegex = new Regex(@"chara/equipment/(e\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private readonly Regex weaponPathRegex = new Regex(@"chara/weapon/(w\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -39,7 +39,6 @@ public class GameDataService : IGameDataService {
             if (string.IsNullOrEmpty(itemName)) {
                 continue;
             }
-
             ushort primaryId = (ushort)item.ModelMain;
             var slot = item.EquipSlotCategory.Value;
 
@@ -49,13 +48,13 @@ public class GameDataService : IGameDataService {
             if (slot.MainHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "wpn"; } else if (slot.OffHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "sub"; } else if (slot.Head == 1) { modelId = $"e{primaryId:D4}"; slotKey = "met"; } else if (slot.Body == 1) { modelId = $"e{primaryId:D4}"; slotKey = "top"; } else if (slot.Gloves == 1) { modelId = $"e{primaryId:D4}"; slotKey = "glv"; } else if (slot.Legs == 1) { modelId = $"e{primaryId:D4}"; slotKey = "dwn"; } else if (slot.Feet == 1) { modelId = $"e{primaryId:D4}"; slotKey = "sho"; } else if (slot.Ears == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ear"; } else if (slot.Neck == 1) { modelId = $"e{primaryId:D4}"; slotKey = "nek"; } else if (slot.Wrists == 1) { modelId = $"e{primaryId:D4}"; slotKey = "wrs"; } else if (slot.FingerR == 1) { modelId = $"e{primaryId:D4}"; slotKey = "rir"; } else if (slot.FingerL == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ril"; } // SÉPARÉ
 
             if (!string.IsNullOrEmpty(modelId) && !string.IsNullOrEmpty(slotKey)) {
-                this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon, item.RowId));
+                this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon, item.RowId, item.LevelEquip, item.LevelItem.RowId));
             }
         }
     }
 
     public ResolvedItem ResolveItem(string gamePath) {
-        var result = new ResolvedItem { Name = this.loc.GetString("GameData_UnknownPath"), SlotKey = "unknown", IconId = 0 };
+        var result = new ResolvedItem { Name = this.loc.GetString("GameData_UnknownPath"), SlotKey = "unknown", IconId = 0, EquipLevel = 0, ItemLevel = 0 };
         if (string.IsNullOrWhiteSpace(gamePath)) {
             return result;
         }
@@ -63,7 +62,6 @@ public class GameDataService : IGameDataService {
         string lowerPath = gamePath.ToLowerInvariant();
         result.SlotKey = ExtractSlotKey(lowerPath);
 
-        // 1. Gear
         var equipMatch = this.equipmentPathRegex.Match(gamePath);
         if (equipMatch.Success) {
             string modelId = equipMatch.Groups[1].Value;
@@ -71,6 +69,8 @@ public class GameDataService : IGameDataService {
                 result.Name = AppendFileType(cacheData.Name, lowerPath);
                 result.IconId = cacheData.IconId;
                 result.ItemId = cacheData.ItemId;
+                result.EquipLevel = cacheData.EquipLevel;
+                result.ItemLevel = cacheData.ItemLevel;
                 return result;
             }
             result.Name = AppendFileType(string.Format(this.loc.GetString("GameData_GenericEquip"), modelId), lowerPath);
@@ -81,19 +81,20 @@ public class GameDataService : IGameDataService {
         var weaponMatch = this.weaponPathRegex.Match(gamePath);
         if (weaponMatch.Success) {
             string modelId = weaponMatch.Groups[1].Value;
-
-            // Try to match Off-Hand (shields) first
             if (this.equipmentModelCache.TryGetValue($"{modelId}_sub", out var subCache)) {
                 result.SlotKey = "sub";
                 result.Name = AppendFileType(subCache.Name, lowerPath);
                 result.IconId = subCache.IconId;
+                result.EquipLevel = subCache.EquipLevel;
+                result.ItemLevel = subCache.ItemLevel;
                 return result;
             }
-            // Then fallback to Main-Hand
             if (this.equipmentModelCache.TryGetValue($"{modelId}_wpn", out var mainCache)) {
                 result.SlotKey = "wpn";
                 result.Name = AppendFileType(mainCache.Name, lowerPath);
                 result.IconId = mainCache.IconId;
+                result.EquipLevel = mainCache.EquipLevel;
+                result.ItemLevel = mainCache.ItemLevel;
                 return result;
             }
 

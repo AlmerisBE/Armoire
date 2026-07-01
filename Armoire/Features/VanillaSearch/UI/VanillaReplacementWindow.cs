@@ -84,6 +84,12 @@ public class VanillaReplacementWindow {
                     ImGui.SetCursorPos(new Vector2(textPos.X, textPos.Y + 2));
                     ImGui.TextUnformatted(item.Name);
 
+                    if (item.EquipLevel > 0 || item.ItemLevel > 0) {
+                        ImGui.SameLine();
+                        ImGui.SetCursorPosY(textPos.Y + 2);
+                        ImGui.TextDisabled($"(Niv. {item.EquipLevel} - iLvl {item.ItemLevel})");
+                    }
+
                     ImGui.SetCursorPos(new Vector2(textPos.X, textPos.Y + 18));
                     ImGui.TextDisabled($"{item.ExpansionName} | {item.Origin}");
 

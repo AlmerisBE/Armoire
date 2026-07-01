@@ -156,7 +156,6 @@ public class ModDetailsWindow {
 
             ImGui.SameLine();
             Vector2 cursorPos = ImGui.GetCursorPos();
-
             ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 4));
             ImGui.TextDisabled(slotDisplayName);
 
@@ -172,7 +171,16 @@ public class ModDetailsWindow {
         foreach (var item in itemsInSlot) {
             ImGui.PushID(item.BaseName + item.IconId);
 
+            // NEW: Save starting layout position to overlay the entire row layout with a Selectable
+            Vector2 startPos = ImGui.GetCursorPos();
+
+            // NEW: Create a full-width selectable row right away that allows item overlap (spanning across the icon area)
+            bool selected = ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(0, 40));
+
+            // NEW: Reset cursor back to the item start position to draw visual elements cleanly on top of the selectable layer
+            ImGui.SetCursorPos(startPos);
             ImGui.BeginGroup();
+
             if (item.IconId > 0) {
                 var iconWrap = this.textureProvider.GetFromGameIcon(new GameIconLookup(item.IconId)).GetWrapOrDefault();
                 if (iconWrap != null) {
@@ -187,29 +195,26 @@ public class ModDetailsWindow {
             ImGui.SameLine();
             Vector2 cursorPos = ImGui.GetCursorPos();
 
-            if (item.IsConflicting) {
-                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1, 0.4f, 0.4f, 1));
-            }
-
-            bool selected = ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.None, new Vector2(0, 40));
-
-            if (item.IsConflicting) {
-                ImGui.PopStyleColor();
-            }
-
             ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 4));
             ImGui.TextUnformatted(item.BaseName);
 
+            if (item.OriginalRef.EquipLevel > 0 || item.OriginalRef.ItemLevel > 0) {
+                ImGui.SameLine();
+                ImGui.SetCursorPosY(cursorPos.Y + 4);
+                ImGui.TextDisabled($"(Niv. {item.OriginalRef.EquipLevel} - iLvl {item.OriginalRef.ItemLevel})");
+            }
+
             if (item.IsConflicting) {
                 ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
-                ImGui.TextDisabled($"(En conflit avec : {string.Join(", ", item.OverwrittenByMods)})");
+                ImGui.TextColored(new Vector4(1.0f, 0.3f, 0.3f, 1.0f), $"(En conflit avec : {string.Join(", ", item.OverwrittenByMods)})");
             } else {
                 ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 20));
                 ImGui.TextColored(new Vector4(0.4f, 1, 0.4f, 1), "(Actif et appliqué)");
             }
+
             ImGui.EndGroup();
 
-            // Glamourer Context Menu
+            // Glamourer Context Menu hooks onto the whole group bounding box area seamlessly
             if (item.ItemId > 0 && ImGui.BeginPopupContextItem($"mod_ctx_{item.BaseName}_{item.IconId}")) {
                 if (ImGui.Selectable(this.loc.GetString("UI_ContextMenu_EquipGlamourer"))) {
                     this.presenter.EquipItem(item.ItemId, slotKey);
@@ -220,23 +225,20 @@ public class ModDetailsWindow {
                 ImGui.SetTooltip("Clic-droit pour plus d'options");
             }
 
-            // Handle click to open vanilla replacement
+            // Handle click anywhere on the row to trigger the vanilla selection window opening sequence
             if (selected) {
                 this.presenter.OpenVanillaReplacement(slotKey, item.OriginalRef.SelectedTextureProviderId);
             }
 
             // Texture inheritance UI
             if (item.IsMissingTextures) {
-                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f); // Indent to align with the text
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 48f);
                 ImGui.BeginGroup();
-
                 ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.6f, 0.0f, 1.0f));
                 ImGui.TextWrapped(this.loc.GetString("ModDetails_MissingTexturesWarning"));
                 ImGui.PopStyleColor();
 
-                // Retrieve the provider state through the presenter
                 string selectedProviderId = this.presenter.GetSelectedProvider(slotKey, item.OriginalRef.SelectedTextureProviderId);
-
                 string previewValue = string.IsNullOrEmpty(selectedProviderId)
                     ? this.loc.GetString("ModDetails_SelectProvider")
                     : (item.AvailableTextureProviders.TryGetValue(selectedProviderId, out var pName) ? pName : "Unknown");
