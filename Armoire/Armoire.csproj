@@ -19,10 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".github\workflows\release.yml" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Glamourer.Api" Version="2.8.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageReference Include="Penumbra.Api" Version="5.15.1" />

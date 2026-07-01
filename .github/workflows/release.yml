@@ -32,7 +32,7 @@ jobs:
 
       - name: Préparation de l'archive ZIP
         run: |
-          Compress-Archive -Path "Armoire/bin/Release/Armoire/*" -DestinationPath "latest.zip" -Force
+          Compress-Archive -Path "Armoire/bin/x64/Release/Armoire/*" -DestinationPath "latest.zip" -Force
 
       - name: Création de la Release GitHub
         uses: softprops/action-gh-release@v2
