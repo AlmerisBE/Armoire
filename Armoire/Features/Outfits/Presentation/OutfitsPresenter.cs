@@ -250,9 +250,21 @@ public class OutfitsPresenter : IOutfitsPresenter {
         }
 
         try {
-            // 1. Serialize to a compact JSON string
+            // Create a temporary clone to filter out ignored elements without affecting the local state
+            var exportTarget = new ArmoireOutfit {
+                Id = outfit.Id,
+                Name = outfit.Name,
+                GlamourerBase64 = outfit.GlamourerBase64,
+                FormatVersion = outfit.FormatVersion,
+                CreatedAt = outfit.CreatedAt,
+                // Only include mods and equipment pieces that are NOT ignored
+                RequiredMods = outfit.RequiredMods?.Where(m => !m.IsIgnored).ToList() ?? new(),
+                Equipment = outfit.Equipment?.Where(e => !e.IsIgnored).ToList() ?? new()
+            };
+
+            // 1. Serialize the filtered clone to a compact JSON string
             var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = false };
-            string json = System.Text.Json.JsonSerializer.Serialize(outfit, options);
+            string json = System.Text.Json.JsonSerializer.Serialize(exportTarget, options);
 
             // 2. Convert to UTF-8 bytes
             byte[] jsonBytes = System.Text.Encoding.UTF8.GetBytes(json);
@@ -266,7 +278,7 @@ public class OutfitsPresenter : IOutfitsPresenter {
             // 4. Encode the compressed binary payload to Base64
             string compressedBase64 = Convert.ToBase64String(memoryStream.ToArray());
 
-            // We update the prefix token to reflect our new compressed V1 format
+            // We update the prefix token to reflect our compressed V1 format
             Dalamud.Bindings.ImGui.ImGui.SetClipboardText($"armoire_v1:{compressedBase64}");
         } catch {
             // Suppress clipboard or OS encryption errors safely
