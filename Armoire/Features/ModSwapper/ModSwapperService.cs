@@ -15,7 +15,7 @@ public class ModSwapperService : IModSwapperService {
     private readonly IPenumbraClient penumbraClient;
     private readonly ArmoireConfiguration configuration;
 
-    private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private readonly Regex modelIdRegex = new Regex(@"([ewa]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public ModSwapperService(IModScannerManager scannerManager, IPluginLog pluginLog, IPenumbraClient penumbraClient, ArmoireConfiguration configuration) {
         this.scannerManager = scannerManager;

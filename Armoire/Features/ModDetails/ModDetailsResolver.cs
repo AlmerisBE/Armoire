@@ -20,7 +20,7 @@ public class ModDetailsResolver : IModDetailsResolver {
     private readonly ILocalizationService loc;
     private readonly ArmoireConfiguration config;
 
-    private readonly Regex modelIdRegex = new Regex(@"([ew]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private readonly Regex modelIdRegex = new Regex(@"([ewa]\d{4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public ModDetailsResolver(IModScannerManager scannerManager, IGameDataService gameDataService, ILocalizationService loc, ArmoireConfiguration config) {
         this.scannerManager = scannerManager;

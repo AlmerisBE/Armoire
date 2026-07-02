@@ -18,6 +18,7 @@ public class GameDataService : IGameDataService {
 
     private readonly Regex equipmentPathRegex = new Regex(@"chara/equipment/(e\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private readonly Regex weaponPathRegex = new Regex(@"chara/weapon/(w\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private readonly Regex accessoryPathRegex = new Regex(@"chara/accessory/(a\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public GameDataService(IDataManager dataManager, IPluginLog pluginLog, ILocalizationService loc) {
         this.dataManager = dataManager;
@@ -43,11 +44,12 @@ public class GameDataService : IGameDataService {
             }
             ushort primaryId = (ushort)item.ModelMain;
             var slot = item.EquipSlotCategory.Value;
-
             string modelId = string.Empty;
             string slotKey = string.Empty;
 
-            if (slot.MainHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "wpn"; } else if (slot.OffHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "sub"; } else if (slot.Head == 1) { modelId = $"e{primaryId:D4}"; slotKey = "met"; } else if (slot.Body == 1) { modelId = $"e{primaryId:D4}"; slotKey = "top"; } else if (slot.Gloves == 1) { modelId = $"e{primaryId:D4}"; slotKey = "glv"; } else if (slot.Legs == 1) { modelId = $"e{primaryId:D4}"; slotKey = "dwn"; } else if (slot.Feet == 1) { modelId = $"e{primaryId:D4}"; slotKey = "sho"; } else if (slot.Ears == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ear"; } else if (slot.Neck == 1) { modelId = $"e{primaryId:D4}"; slotKey = "nek"; } else if (slot.Wrists == 1) { modelId = $"e{primaryId:D4}"; slotKey = "wrs"; } else if (slot.FingerR == 1) { modelId = $"e{primaryId:D4}"; slotKey = "rir"; } else if (slot.FingerL == 1) { modelId = $"e{primaryId:D4}"; slotKey = "ril"; } // SÉPARÉ
+            if (slot.MainHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "wpn"; } else if (slot.OffHand == 1) { modelId = $"w{primaryId:D4}"; slotKey = "sub"; } else if (slot.Head == 1) { modelId = $"e{primaryId:D4}"; slotKey = "met"; } else if (slot.Body == 1) { modelId = $"e{primaryId:D4}"; slotKey = "top"; } else if (slot.Gloves == 1) { modelId = $"e{primaryId:D4}"; slotKey = "glv"; } else if (slot.Legs == 1) { modelId = $"e{primaryId:D4}"; slotKey = "dwn"; } else if (slot.Feet == 1) { modelId = $"e{primaryId:D4}"; slotKey = "sho"; }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // FIX: Enforce the 'a' prefix for all standard FFXIV accessory slots
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        else if (slot.Ears == 1) { modelId = $"a{primaryId:D4}"; slotKey = "ear"; } else if (slot.Neck == 1) { modelId = $"a{primaryId:D4}"; slotKey = "nek"; } else if (slot.Wrists == 1) { modelId = $"a{primaryId:D4}"; slotKey = "wrs"; } else if (slot.FingerR == 1) { modelId = $"a{primaryId:D4}"; slotKey = "rir"; } else if (slot.FingerL == 1) { modelId = $"a{primaryId:D4}"; slotKey = "ril"; }
 
             if (!string.IsNullOrEmpty(modelId) && !string.IsNullOrEmpty(slotKey)) {
                 this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon, item.RowId, item.LevelEquip, item.LevelItem.RowId));
@@ -73,6 +75,7 @@ public class GameDataService : IGameDataService {
         string lowerPath = gamePath.ToLowerInvariant();
         result.SlotKey = ExtractSlotKey(lowerPath);
 
+        // 1. Equipment Resolution
         var equipMatch = this.equipmentPathRegex.Match(gamePath);
         if (equipMatch.Success) {
             string modelId = equipMatch.Groups[1].Value;
@@ -88,7 +91,23 @@ public class GameDataService : IGameDataService {
             return result;
         }
 
-        // 2. Weapons Resolution
+        // 2. NEW: Accessory Resolution 
+        var accessoryMatch = this.accessoryPathRegex.Match(gamePath);
+        if (accessoryMatch.Success) {
+            string modelId = accessoryMatch.Groups[1].Value;
+            if (!string.IsNullOrEmpty(result.SlotKey) && this.equipmentModelCache.TryGetValue($"{modelId}_{result.SlotKey}", out var cacheData)) {
+                result.Name = AppendFileType(cacheData.Name, lowerPath);
+                result.IconId = cacheData.IconId;
+                result.ItemId = cacheData.ItemId;
+                result.EquipLevel = cacheData.EquipLevel;
+                result.ItemLevel = cacheData.ItemLevel;
+                return result;
+            }
+            result.Name = AppendFileType(string.Format(this.loc.GetString("GameData_GenericEquip"), modelId), lowerPath);
+            return result;
+        }
+
+        // 3. Weapons Resolution
         var weaponMatch = this.weaponPathRegex.Match(gamePath);
         if (weaponMatch.Success) {
             string modelId = weaponMatch.Groups[1].Value;
@@ -109,13 +128,12 @@ public class GameDataService : IGameDataService {
                 return result;
             }
 
-            // If unknown, default to Main-Hand visual slot
             result.SlotKey = "wpn";
             result.Name = AppendFileType(string.Format(this.loc.GetString("GameData_GenericWeapon"), modelId), lowerPath);
             return result;
         }
 
-        // 3. Customisation
+        // 4. Customisation
         if (lowerPath.Contains("chara/human/")) {
             result.SlotKey = "custom";
             if (lowerPath.Contains("face")) {

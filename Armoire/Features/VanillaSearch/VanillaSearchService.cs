@@ -57,7 +57,8 @@ public class VanillaSearchService : IVanillaSearchService {
             }
 
             ushort primaryId = (ushort)item.ModelMain;
-            string prefix = (slot.MainHand == 1 || slot.OffHand == 1) ? "w" : "e";
+            string prefix = (slot.MainHand == 1 || slot.OffHand == 1) ? "w" :
+                            (slot.Ears == 1 || slot.Neck == 1 || slot.Wrists == 1 || slot.FingerR == 1 || slot.FingerL == 1) ? "a" : "e";
             string modelId = $"{prefix}{primaryId:D4}";
 
             if (blockedModelIds.Contains(modelId)) {
@@ -104,7 +105,7 @@ public class VanillaSearchService : IVanillaSearchService {
 
     private HashSet<string> GetModifiedModelIds(string slotKey, EffectiveCollectionState globalState) {
         var modifiedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var regex = new Regex($@"(e\d{{4}})_{slotKey}|(w\d{{4}})_{slotKey}", RegexOptions.IgnoreCase);
+        var regex = new Regex($@"(e\d{{4}})_{slotKey}|(w\d{{4}})_{slotKey}|(a\d{{4}})_{slotKey}", RegexOptions.IgnoreCase);
 
         foreach (var mod in globalState.EffectiveMods.Values.Where(m => m.IsEnabled)) {
             if (!this.scannerManager.ModCache.TryGetValue(mod.Id, out var cache)) {
