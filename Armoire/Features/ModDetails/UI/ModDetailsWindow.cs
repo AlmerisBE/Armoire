@@ -45,8 +45,7 @@ public class ModDetailsWindow {
                 return;
             }
 
-            string stateStr = currentState.IsEnabled ?
-                this.loc.GetString("ModDetails_StateEnabled") : this.loc.GetString("ModDetails_StateDisabled");
+            string stateStr = currentState.IsEnabled ? this.loc.GetString("ModDetails_StateEnabled") : this.loc.GetString("ModDetails_StateDisabled");
             ImGui.TextWrapped(string.Format(this.loc.GetString("ModDetails_Header"), currentState.Priority, stateStr));
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
@@ -120,11 +119,17 @@ public class ModDetailsWindow {
             return;
         }
 
+        // Group equipment by removing all appended file type suffixes dynamically
         var itemsInSlot = currentState.ReplacedSlots
             .Where(s => s.SlotCategory == slotKey)
             .GroupBy(s => new {
                 s.IconId,
-                BaseName = s.LocalizedItemName.Split('[')[0].Trim()
+                BaseName = s.LocalizedItemName
+                    .Replace(this.loc.GetString("GameData_SuffixMdl"), "")
+                    .Replace(this.loc.GetString("GameData_SuffixMtrl"), "")
+                    .Replace(this.loc.GetString("GameData_SuffixTex"), "")
+                    .Replace(this.loc.GetString("GameData_SuffixPap"), "")
+                    .Trim()
             })
             .Select(g => {
                 var first = g.First();
@@ -132,6 +137,7 @@ public class ModDetailsWindow {
                     IconId = g.Key.IconId,
                     BaseName = g.Key.BaseName,
                     ItemId = first.ItemId,
+                    // If ANY of the underlying files (mdl, mtrl) are conflicting, the whole item is flagged
                     IsConflicting = g.Any(x => x.IsConflicting),
                     OverwrittenByMods = g.SelectMany(x => x.OverwrittenByMods).Distinct().ToList(),
                     IsMissingTextures = g.Any(x => x.IsMissingTextures),
@@ -171,13 +177,13 @@ public class ModDetailsWindow {
         foreach (var item in itemsInSlot) {
             ImGui.PushID(item.BaseName + item.IconId);
 
-            // NEW: Save starting layout position to overlay the entire row layout with a Selectable
+            // Save starting layout position to overlay the entire row layout with a Selectable
             Vector2 startPos = ImGui.GetCursorPos();
 
-            // NEW: Create a full-width selectable row right away that allows item overlap (spanning across the icon area)
+            // Create a full-width selectable row right away that allows item overlap
             bool selected = ImGui.Selectable($"##select_{item.BaseName}", false, ImGuiSelectableFlags.AllowItemOverlap, new Vector2(0, 40));
 
-            // NEW: Reset cursor back to the item start position to draw visual elements cleanly on top of the selectable layer
+            // Reset cursor back to the item start position to draw visual elements cleanly
             ImGui.SetCursorPos(startPos);
             ImGui.BeginGroup();
 
@@ -194,7 +200,6 @@ public class ModDetailsWindow {
 
             ImGui.SameLine();
             Vector2 cursorPos = ImGui.GetCursorPos();
-
             ImGui.SetCursorPos(new Vector2(cursorPos.X, cursorPos.Y + 4));
             ImGui.TextUnformatted(item.BaseName);
 
@@ -278,7 +283,6 @@ public class ModDetailsWindow {
 
         if (ImGui.BeginTable("ModDetailsTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable)) {
             ImGui.TableSetupScrollFreeze(0, 1);
-
             ImGui.TableSetupColumn(this.loc.GetString("ModDetails_ColItem"), ImGuiTableColumnFlags.WidthFixed, 200f);
             ImGui.TableSetupColumn(this.loc.GetString("ModDetails_ColStatus"), ImGuiTableColumnFlags.WidthFixed, 150f);
             ImGui.TableSetupColumn(this.loc.GetString("ModDetails_ColWinner"), ImGuiTableColumnFlags.WidthStretch);
@@ -291,7 +295,6 @@ public class ModDetailsWindow {
                 string displayTitle = slot.AffectedPaths.Count > 1
                     ? $"{slot.LocalizedItemName} (x{slot.AffectedPaths.Count})"
                     : slot.LocalizedItemName;
-
                 ImGui.TextUnformatted(displayTitle);
 
                 if (ImGui.IsItemHovered()) {
@@ -299,7 +302,6 @@ public class ModDetailsWindow {
                 }
 
                 ImGui.TableNextColumn();
-
                 if (slot.IsConflicting) {
                     ImGui.TextColored(new Vector4(1, 0, 0, 1), this.loc.GetString("ModDetails_StatusConflict"));
                 } else {
@@ -307,7 +309,6 @@ public class ModDetailsWindow {
                 }
 
                 ImGui.TableNextColumn();
-
                 if (slot.IsConflicting) {
                     ImGui.TextWrapped(string.Join(", ", slot.OverwrittenByMods));
                 } else {
