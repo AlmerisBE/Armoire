@@ -1,3 +1,6 @@
+// ==================================================================
+// START OF FILE: .\Armoire\Features\MainApp\UI\MainWindow.cs
+// ==================================================================
 namespace Armoire.Features.MainApp.UI;
 
 using Armoire.Core.Localization;
@@ -30,7 +33,9 @@ public class MainWindow : Window, IDisposable {
         StatsTab statsTab,
         ConfigTab configTab,
         AboutTab aboutTab,
-        OutfitsTab outfitsTab) : base("Armoire") {
+        // Inject the version dynamically into the Window base constructor
+        OutfitsTab outfitsTab) : base($"Armoire v{presenter.PluginVersion}") {
+
         this.loc = loc;
         this.presenter = presenter;
         this.homeTab = homeTab;
