@@ -6,6 +6,7 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -171,7 +172,6 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
 
         // 2. Compute dynamic file conflicts using scanner cache entries AND active options
         // We now store the ModName alongside ModId to feed the OverwrittenBy property
-        var globalFileOwnership = new Dictionary<string, (string ModId, string ModName, int Priority)>(StringComparer.OrdinalIgnoreCase);
         var conflictingMods = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var scannerCache = this.modScannerManager.ModCache;
 
@@ -182,38 +182,31 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
             }
         }
 
-        // Sort mods by priority (highest first)
-        // If priorities are identical, fallback to alphabetical sorting to mimic Penumbra's deterministic behavior
-        evaluatedMods.Sort((a, b) => {
-            int priorityComparison = b.Priority.CompareTo(a.Priority);
-            if (priorityComparison != 0) {
-                return priorityComparison;
-            }
-            return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
-        });
+        // Sort mods strictly by priority (highest first)
+        evaluatedMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+        // Use a list of owners to handle equal priority ties dynamically
+        var globalFileOwnership = new Dictionary<string, List<(string ModId, string ModName, int Priority)>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var mod in evaluatedMods) {
             if (scannerCache.TryGetValue(mod.Id, out var cachedModData)) {
 
                 var activeModPaths = new HashSet<string>(cachedModData.ModifiedGamePaths, StringComparer.OrdinalIgnoreCase);
-
                 foreach (var kvp in cachedModData.OptionGroups) {
-                    var groupName = kvp.Key;
-                    var groupDef = kvp.Value;
-                    uint userSetting = mod.Settings.TryGetValue(groupName, out var val) ? val : 0;
+                    uint userSetting = mod.Settings.TryGetValue(kvp.Key, out var val) ? val : 0;
 
-                    if (groupDef.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase)) {
-                        for (int i = 0; i < groupDef.OptionPaths.Count; i++) {
+                    if (kvp.Value.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase)) {
+                        for (int i = 0; i < kvp.Value.OptionPaths.Count; i++) {
                             if ((userSetting & (1u << i)) != 0) {
-                                foreach (var path in groupDef.OptionPaths[i]) {
+                                foreach (var path in kvp.Value.OptionPaths[i]) {
                                     activeModPaths.Add(path);
                                 }
                             }
                         }
                     } else {
                         int index = (int)userSetting;
-                        if (index >= 0 && index < groupDef.OptionPaths.Count) {
-                            foreach (var path in groupDef.OptionPaths[index]) {
+                        if (index >= 0 && index < kvp.Value.OptionPaths.Count) {
+                            foreach (var path in kvp.Value.OptionPaths[index]) {
                                 activeModPaths.Add(path);
                             }
                         }
@@ -221,25 +214,51 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
                 }
 
                 foreach (var gamePath in activeModPaths) {
-                    if (globalFileOwnership.TryGetValue(gamePath, out var ownerInfo)) {
-                        // FIX: Only the current mod (the loser) is marked as conflicting
-                        conflictingMods.Add(mod.Id);
+                    if (globalFileOwnership.TryGetValue(gamePath, out var owners)) {
+                        int topPriority = owners[0].Priority;
 
-                        // Track which higher-priority mod is crushing this file
-                        mod.OverwrittenBy.Add(ownerInfo.ModName);
+                        if (topPriority == mod.Priority) {
+                            // EQUAL PRIORITY CONFLICT: Both mods are losers and winners simultaneously
+                            foreach (var owner in owners) {
+                                // SECURITY: A mod cannot be in conflict with itself
+                                if (owner.ModId != mod.Id) {
+                                    conflictingMods.Add(mod.Id);
+                                    mod.ConflictingSlots.Add(ParseEquipmentSlot(gamePath));
+                                    mod.OverwrittenBy.Add(owner.ModName);
 
-                        // Analyze the file path to determine the equipment slot
-                        mod.ConflictingSlots.Add(ParseEquipmentSlot(gamePath));
+                                    // Retroactively mark the previous owner as conflicting too
+                                    conflictingMods.Add(owner.ModId);
+                                    if (state.EffectiveMods.TryGetValue(owner.ModId, out var ownerMod)) {
+                                        ownerMod.OverwrittenBy.Add(mod.Name);
+                                        ownerMod.ConflictingSlots.Add(ParseEquipmentSlot(gamePath));
+                                    }
+                                }
+                            }
+
+                            // Add current mod as a co-owner for subsequent mods to check against
+                            if (!owners.Any(o => o.ModId == mod.Id)) {
+                                owners.Add((mod.Id, mod.Name, mod.Priority));
+                            }
+                        } else if (topPriority > mod.Priority) {
+                            // STRICT LOSS: Current mod loses to higher priority mods
+                            conflictingMods.Add(mod.Id);
+                            mod.ConflictingSlots.Add(ParseEquipmentSlot(gamePath));
+
+                            foreach (var owner in owners) {
+                                if (owner.ModId != mod.Id) {
+                                    mod.OverwrittenBy.Add(owner.ModName);
+                                }
+                            }
+                        }
                     } else {
-                        // Take ownership of the file
-                        globalFileOwnership[gamePath] = (mod.Id, mod.Name, mod.Priority);
+                        // TAKE OWNERSHIP
+                        globalFileOwnership[gamePath] = new List<(string ModId, string ModName, int Priority)> { (mod.Id, mod.Name, mod.Priority) };
                     }
                 }
             }
         }
 
         state.ConflictModCount = conflictingMods.Count;
-
         foreach (var conflictId in conflictingMods) {
             if (state.EffectiveMods.TryGetValue(conflictId, out var conflictingMod)) {
                 state.ConflictingMods.Add(conflictingMod);
@@ -247,9 +266,12 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         state.ConflictingMods.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+
+        // Populate the state's FileOwnership map for the UI to read
         foreach (var kvp in globalFileOwnership) {
-            state.FileOwnership[kvp.Key] = kvp.Value.ModId;
+            state.FileOwnership[kvp.Key] = new HashSet<string>(kvp.Value.Select(v => v.ModId), StringComparer.OrdinalIgnoreCase);
         }
+
         return state;
     }
 

@@ -101,16 +101,20 @@ public class OutfitsPresenter : IOutfitsPresenter {
                                 if (slotKey == "wpn" || slotKey == "sub") {
                                     isCorrectSlot = filePath.Contains("chara/weapon/");
                                 } else if (slotKey == "rir" || slotKey == "ril") {
-                                    isCorrectSlot = filePath.Contains("_rir.") || filePath.Contains("_rir_") || filePath.Contains("_ril.") || filePath.Contains("_ril_");
+                                    isCorrectSlot = filePath.Contains("_rir.") ||
+                                                   filePath.Contains("_rir_") || filePath.Contains("_ril.") || filePath.Contains("_ril_");
                                 } else {
-                                    isCorrectSlot = filePath.Contains($"_{slotKey}.") || filePath.Contains($"_{slotKey}_");
+                                    isCorrectSlot = filePath.Contains($"_{slotKey}.") ||
+                                                   filePath.Contains($"_{slotKey}_");
                                 }
 
                                 if (isCorrectSlot) {
-                                    if (this.latestGlobalState.EffectiveMods.TryGetValue(kvp.Value, out var ownerMod)) {
-                                        // Avoid adding duplicates to the initial pool
-                                        if (!modifyingMods.Any(m => m.Id == ownerMod.Id)) {
-                                            modifyingMods.Add(ownerMod);
+                                    foreach (var ownerId in kvp.Value) {
+                                        if (this.latestGlobalState.EffectiveMods.TryGetValue(ownerId, out var ownerMod)) {
+                                            // Avoid adding duplicates to the initial pool
+                                            if (!modifyingMods.Any(m => m.Id == ownerMod.Id)) {
+                                                modifyingMods.Add(ownerMod);
+                                            }
                                         }
                                     }
                                 }

@@ -78,12 +78,19 @@ public class ModDetailsResolver : IModDetailsResolver {
                 ItemLevel = resolvedData.ItemLevel
             };
 
-            // This properly handles conflicts between mods with the EXACT SAME priority (e.g., Priority 0 vs Priority 0)
-            if (currentState.FileOwnership.TryGetValue(path, out string? winnerModId) && winnerModId != modId) {
-                slotState.IsConflicting = true;
-                if (currentState.EffectiveMods.TryGetValue(winnerModId, out var winnerMod)) {
-                    string priorityStr = string.Format(this.loc.GetString("ModDetails_PriorityLabel"), winnerMod.Priority);
-                    slotState.OverwrittenByMods.Add($"{winnerMod.Name}{priorityStr}");
+            // Rely on the global FileOwnership map which now correctly supports multiple owners
+            // for equal-priority unresolved conflicts.
+            if (currentState.FileOwnership.TryGetValue(path, out var ownerIds)) {
+                var enemyIds = ownerIds.Where(id => !id.Equals(modId, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (enemyIds.Any()) {
+                    slotState.IsConflicting = true;
+                    foreach (var enemyId in enemyIds) {
+                        if (currentState.EffectiveMods.TryGetValue(enemyId, out var enemyMod)) {
+                            string priorityStr = string.Format(this.loc.GetString("ModDetails_PriorityLabel"), enemyMod.Priority);
+                            slotState.OverwrittenByMods.Add($"{enemyMod.Name}{priorityStr}");
+                        }
+                    }
                 }
             }
 
