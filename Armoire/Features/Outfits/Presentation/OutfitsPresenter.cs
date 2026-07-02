@@ -250,6 +250,37 @@ public class OutfitsPresenter : IOutfitsPresenter {
         }
 
         try {
+            // Identify mods that should be excluded from the string
+            var ignoredModNames = outfit.RequiredMods?
+                .Where(m => m.IsIgnored)
+                .Select(m => m.Name)
+                .ToHashSet(System.StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>();
+
+            string vanillaStr = this.loc.GetString("Outfits_VanillaMod");
+
+            // Clone and rigorously clean equipment pieces
+            var cleanEquipment = outfit.Equipment?
+                .Where(e => !e.IsIgnored)
+                .Select(e => {
+                    var newPiece = new OutfitEquipmentPiece {
+                        ItemId = e.ItemId,
+                        Name = e.Name,
+                        IconId = e.IconId,
+                        EquipLevel = e.EquipLevel,
+                        ItemLevel = e.ItemLevel,
+                        Category = e.Category,
+                        IsIgnored = e.IsIgnored
+                    };
+
+                    // Strip ignored mod names from the comma-separated string
+                    var currentMods = e.ModifyingModNames.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                    var keptMods = currentMods.Where(m => m != vanillaStr && !ignoredModNames.Contains(m)).ToList();
+
+                    newPiece.ModifyingModNames = keptMods.Count > 0 ? string.Join(", ", keptMods) : vanillaStr;
+
+                    return newPiece;
+                }).ToList() ?? new List<OutfitEquipmentPiece>();
+
             // Create a temporary clone to filter out ignored elements without affecting the local state
             var exportTarget = new ArmoireOutfit {
                 Id = outfit.Id,
@@ -257,9 +288,8 @@ public class OutfitsPresenter : IOutfitsPresenter {
                 GlamourerBase64 = outfit.GlamourerBase64,
                 FormatVersion = outfit.FormatVersion,
                 CreatedAt = outfit.CreatedAt,
-                // Only include mods and equipment pieces that are NOT ignored
                 RequiredMods = outfit.RequiredMods?.Where(m => !m.IsIgnored).ToList() ?? new(),
-                Equipment = outfit.Equipment?.Where(e => !e.IsIgnored).ToList() ?? new()
+                Equipment = cleanEquipment
             };
 
             // 1. Serialize the filtered clone to a compact JSON string
