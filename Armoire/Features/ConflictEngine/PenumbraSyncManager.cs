@@ -21,6 +21,8 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
     private DateTime lastCheckTime = DateTime.MinValue;
     private bool pendingRefresh = false;
 
+    private bool hasSuccessfullyConnected = false;
+
     public event Action<PenumbraStatusResult>? OnStatusUpdated;
 
     public PenumbraSyncManager(
@@ -57,7 +59,18 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
 
     private void OnFrameworkUpdate(IFramework fw) {
         if (pendingRefresh) {
-            OnStatusUpdated?.Invoke(this.analyzer.GetStatusReport());
+            var report = this.analyzer.GetStatusReport();
+
+            if (report.IsEnabled && report.IsPlayerConnected) {
+                if (!hasSuccessfullyConnected) {
+                    hasSuccessfullyConnected = true;
+                    TriggerBackgroundScan();
+                }
+            } else if (!report.IsEnabled) {
+                hasSuccessfullyConnected = false;
+            }
+
+            OnStatusUpdated?.Invoke(report);
             pendingRefresh = false;
         }
 
@@ -75,7 +88,8 @@ public class PenumbraSyncManager : IPenumbraSyncManager, IDisposable {
         var currentModCount = this.penumbraClient.GetRawModsList().Count;
 
         bool hasChanged = currentPlayerName != lastPlayerName || currentModCount != lastModCount;
-        bool needsRetry = this.penumbraClient.IsEnabled() && !string.IsNullOrEmpty(currentPlayerName) && this.lastPlayerName == string.Empty;
+
+        bool needsRetry = !hasSuccessfullyConnected && this.penumbraClient.IsEnabled() && !string.IsNullOrEmpty(currentPlayerName);
 
         if (hasChanged || needsRetry || this.repository.IsStale) {
             lastPlayerName = currentPlayerName;
