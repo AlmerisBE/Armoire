@@ -56,7 +56,7 @@ Write-Host "Exécution des commandes Git..." -ForegroundColor Yellow
 git checkout dev
 
 # Ajouter et commiter les fichiers modifiés
-git add $csprojPath $pluginJsonPath $repoJsonPath
+git add $csprojPath $pluginJsonPath $repoJsonPath $PSCommandPath
 git commit -m "ci: bump version to $NewVersion"
 
 # Pousser dev sur GitHub
