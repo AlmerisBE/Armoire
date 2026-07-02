@@ -16,6 +16,7 @@ public class WindowManager : IWindowManager, IDisposable {
     private readonly VanillaReplacementWindow vanillaReplacementWindow;
     private readonly ModScannerWindow modScannerWindow;
     private readonly OutfitDetailsWindow outfitDetailsWindow;
+    private readonly OutfitImportWindow importWindow;
 
     private readonly WindowSystem windowSystem;
 
@@ -25,7 +26,8 @@ public class WindowManager : IWindowManager, IDisposable {
         ModDetailsWindow modDetailsWindow,
         VanillaReplacementWindow vanillaReplacementWindow,
         ModScannerWindow modScannerWindow,
-        OutfitDetailsWindow outfitDetailsWindow) {
+        OutfitDetailsWindow outfitDetailsWindow,
+        OutfitImportWindow importWindow) {
         this.mainWindow = mainWindow;
         this.configWindow = configWindow;
         this.modDetailsWindow = modDetailsWindow;
@@ -38,6 +40,7 @@ public class WindowManager : IWindowManager, IDisposable {
         this.windowSystem.AddWindow(this.configWindow);
 
         this.mainWindow.OnConfigRequested += ToggleConfigWindow;
+        this.importWindow = importWindow;
     }
 
     public void ToggleMainWindow() => mainWindow.IsOpen = !mainWindow.IsOpen;
@@ -52,6 +55,7 @@ public class WindowManager : IWindowManager, IDisposable {
         this.vanillaReplacementWindow.Draw();
         this.modScannerWindow.Draw();
         this.outfitDetailsWindow.Draw();
+        this.importWindow.Draw();
     }
 
     public void Dispose() {

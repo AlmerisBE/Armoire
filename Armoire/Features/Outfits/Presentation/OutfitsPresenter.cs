@@ -188,7 +188,7 @@ public class OutfitsPresenter : IOutfitsPresenter {
             return (true, missingMods);
         }
 
-        foreach (var requirement in outfit.RequiredMods) {
+        foreach (var requirement in outfit.RequiredMods.Where(r => !r.IsIgnored)) {
             if (!this.latestGlobalState.EffectiveMods.TryGetValue(requirement.ModId, out var activeMod) || !activeMod.IsEnabled) {
                 missingMods.Add(requirement.Name);
             }

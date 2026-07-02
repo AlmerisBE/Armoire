@@ -18,6 +18,7 @@ public class MainWindowTests {
         var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
         var mockOutfitsPresenter = Substitute.For<IOutfitsPresenter>();
         var mockOutfitDetailsPresenter = Substitute.For<IOutfitDetailsPresenter>();
+        var mockOutfitImportPresenter = Substitute.For<IOutfitImportPresenter>();
 
         // Instantiate the tab components using our mocked dependencies
         var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
@@ -26,9 +27,10 @@ public class MainWindowTests {
         var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
         var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
 
-        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter);
+        // Inject the new mock into the OutfitsTab constructor
+        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter, mockOutfitImportPresenter);
 
-        // Inject all the newly required tabs into the MainWindow constructor
+        // Inject all the required tabs into the MainWindow constructor
         var mainWindow = new MainWindow(
             mockLocalization,
             mockMainPresenter,

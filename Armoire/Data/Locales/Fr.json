@@ -165,5 +165,17 @@
   "UI_VanillaWindow_SearchExp": "Extension...",
   "UI_VanillaWindow_SearchName": "Rechercher par nom...",
   "UI_VanillaWindow_SearchOrigin": "Origine...",
-  "UI_VanillaWindow_Title": "Recherche d'objet Vanilla"
+  "UI_VanillaWindow_Title": "Recherche d'objet Vanilla",
+  "Import_BtnAnalyze": "Commencer l'importation",
+  "Import_BtnCancel": "Annuler",
+  "Import_BtnConfirm": "Confirmer l'importation",
+  "Import_ErrorCorrupted": "Le code est corrompu ou incomplet.",
+  "Import_ErrorCRC": "Erreur de validation CRC. Le code a été mal copié.",
+  "Import_ErrorGeneric": "Une erreur inattendue est survenue lors de la lecture.",
+  "Import_ErrorPrefix": "Le code doit commencer par 'armoire_v1:'.",
+  "Import_InputHint": "Collez le code (armoire_v1:...) ici",
+  "Import_MissingModsDesc": "Vous devez télécharger et activer ces mods pour que la tenue s'affiche correctement :",
+  "Import_MissingModsHeader": "⚠️ Mods manquants détectés :",
+  "Import_StatusMissing": "Manquant",
+  "Import_WindowTitle": "Importer une tenue"
 }

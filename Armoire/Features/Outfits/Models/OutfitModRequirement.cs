@@ -26,4 +26,10 @@ public class OutfitModRequirement {
     /// Allows warning the user if their installed mod is drastically outdated.
     /// </summary>
     public string Version { get; set; } = string.Empty;
+
+    /// <summary>
+    /// If true, this mod is intentionally ignored by the user. It won't trigger warnings and won't show up in the equipment table.
+    /// </summary>
+    public bool IsIgnored { get; set; } = false;
+
 }

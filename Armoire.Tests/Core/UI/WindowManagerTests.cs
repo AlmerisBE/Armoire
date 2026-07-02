@@ -19,6 +19,7 @@ public class WindowManagerTests {
         var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
         var mockOutfitsPresenter = Substitute.For<IOutfitsPresenter>();
         var mockOutfitDetailsPresenter = Substitute.For<IOutfitDetailsPresenter>();
+        var mockOutfitImportPresenter = Substitute.For<IOutfitImportPresenter>();
 
         var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
         var resolvedTab = new ResolvedTab(mockLocalization, mockMainPresenter);
@@ -26,7 +27,7 @@ public class WindowManagerTests {
         var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
         var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
 
-        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter);
+        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter, mockOutfitImportPresenter);
 
         var mainWindow = new MainWindow(
             mockLocalization,
@@ -48,7 +49,8 @@ public class WindowManagerTests {
             null!, // modDetailsWindow
             null!, // vanillaReplacementWindow
             null!, // modScannerWindow
-            null!  // outfitDetailsWindow (NOUVEAU)
+            null!, // outfitDetailsWindow
+            null!  // importWindow
         );
 
         var initialState = configWindow.IsOpen;

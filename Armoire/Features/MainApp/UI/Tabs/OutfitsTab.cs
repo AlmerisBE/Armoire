@@ -12,12 +12,14 @@ public class OutfitsTab {
     private readonly ILocalizationService loc;
     private readonly IOutfitsPresenter presenter;
     private readonly IOutfitDetailsPresenter detailsPresenter;
+    private readonly IOutfitImportPresenter importPresenter;
     private string newOutfitName = string.Empty;
 
-    public OutfitsTab(ILocalizationService loc, IOutfitsPresenter presenter, IOutfitDetailsPresenter detailsPresenter) {
+    public OutfitsTab(ILocalizationService loc, IOutfitsPresenter presenter, IOutfitDetailsPresenter detailsPresenter, IOutfitImportPresenter importPresenter) {
         this.loc = loc;
         this.presenter = presenter;
         this.detailsPresenter = detailsPresenter;
+        this.importPresenter = importPresenter;
     }
 
     public void Draw() {
@@ -33,6 +35,10 @@ public class OutfitsTab {
                 this.presenter.CreateOutfit(this.newOutfitName);
                 this.newOutfitName = string.Empty;
             }
+        }
+        ImGui.SameLine();
+        if (ImGui.Button(this.loc.GetString("Import_WindowTitle"))) {
+            this.importPresenter.Open();
         }
 
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
@@ -64,13 +70,16 @@ public class OutfitsTab {
                         ImGui.SetTooltip(this.loc.GetString("Outfits_TooltipInspect"));
                     }
 
+                    // Column 2: Readiness Status
                     ImGui.TableNextColumn();
                     var readiness = this.presenter.CheckOutfitReadiness(outfit);
 
-                    if (outfit.RequiredMods == null || outfit.RequiredMods.Count == 0) {
+                    int activeReqsCount = outfit.RequiredMods?.Count(r => !r.IsIgnored) ?? 0;
+
+                    if (activeReqsCount == 0) {
                         ImGui.TextDisabled(this.loc.GetString("Outfits_StatusNoMods"));
                     } else if (readiness.IsReady) {
-                        ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), outfit.RequiredMods.Count));
+                        ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), activeReqsCount));
                     } else {
                         ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusMissing"), readiness.MissingModNames.Count));
 

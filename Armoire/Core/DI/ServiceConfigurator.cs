@@ -112,6 +112,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<IPenumbraStatusPresenter, PenumbraStatusPresenter>();
         services.AddSingleton<IOutfitsPresenter, OutfitsPresenter>();
         services.AddSingleton<IOutfitDetailsPresenter, OutfitDetailsPresenter>();
+        services.AddSingleton<IOutfitImportPresenter, OutfitImportPresenter>();
     }
 
     private static void RegisterUiComponents(IServiceCollection services) {
@@ -129,6 +130,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<ConfigTab>();
         services.AddSingleton<AboutTab>();
         services.AddSingleton<OutfitsTab>();
+        services.AddSingleton<OutfitImportWindow>();
     }
 
     private static void RegisterCommands(IServiceCollection services) {

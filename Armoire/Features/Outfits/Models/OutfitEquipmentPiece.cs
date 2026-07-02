@@ -10,6 +10,10 @@ public class OutfitEquipmentPiece {
     public byte EquipLevel { get; set; }
     public uint ItemLevel { get; set; }
     public string Category { get; set; } = string.Empty;
+    /// <summary>
+    /// If true, this equipment piece will be ignored during activation and greyed out in the UI.
+    /// </summary>
+    public bool IsIgnored { get; set; } = false;
 
     /// <summary>
     /// The names of the mods that are actively modifying this specific piece.

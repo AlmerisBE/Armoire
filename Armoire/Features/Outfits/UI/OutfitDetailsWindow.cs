@@ -1,11 +1,13 @@
 ﻿namespace Armoire.Features.Outfits.UI;
 
 using Armoire.Core.Localization;
-using Armoire.Features.Outfits.Models;
 using Armoire.Features.Outfits.Presentation;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 public class OutfitDetailsWindow {
@@ -83,6 +85,7 @@ public class OutfitDetailsWindow {
 
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
+            // --- TABLE 1: EQUIPMENT ---
             int equipCols = this.isEditing ? 5 : 4;
             if (ImGui.BeginTable("OutfitDetailsEquipTable", equipCols, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 250))) {
                 ImGui.TableSetupScrollFreeze(0, 1);
@@ -91,16 +94,28 @@ public class OutfitDetailsWindow {
                 ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColStats"), ImGuiTableColumnFlags.WidthFixed, 140f);
                 ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColWinner"), ImGuiTableColumnFlags.WidthStretch);
                 if (this.isEditing) {
-                    ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColAction"), ImGuiTableColumnFlags.WidthFixed, 40f);
+                    ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColAction"), ImGuiTableColumnFlags.WidthFixed, 30f);
                 }
 
                 ImGui.TableHeadersRow();
 
                 var pieces = currentOutfit.Equipment ?? new();
-                OutfitEquipmentPiece? pieceToRemove = null;
+
+                // Retrieve the list of ignored mod names to clean up the equipment table dynamically
+                var ignoredModNames = currentOutfit.RequiredMods?
+                    .Where(m => m.IsIgnored)
+                    .Select(m => m.Name)
+                    .ToHashSet(System.StringComparer.OrdinalIgnoreCase) ?? new HashSet<string>();
+
                 int ringCount = 0;
 
                 foreach (var piece in pieces) {
+                    bool wasIgnored = piece.IsIgnored;
+                    // If the equipment is ignored, make the entire row semi-transparent
+                    if (wasIgnored) {
+                        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.4f);
+                    }
+
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     ImGui.AlignTextToFramePadding();
@@ -126,34 +141,50 @@ public class OutfitDetailsWindow {
 
                     ImGui.TableNextColumn();
                     ImGui.AlignTextToFramePadding();
-                    if (piece.ModifyingModNames.Contains(this.loc.GetString("Outfits_VanillaMod"))) {
+
+                    // DYNAMIC CLEANUP: Remove mods that were explicitly ignored in the bottom table
+                    string vanillaStr = this.loc.GetString("Outfits_VanillaMod");
+                    var activeMods = piece.ModifyingModNames
+                        .Split(new[] { ", " }, System.StringSplitOptions.RemoveEmptyEntries)
+                        .Where(m => m != vanillaStr && !ignoredModNames.Contains(m))
+                        .ToList();
+
+                    string displayMods = activeMods.Count > 0 ? string.Join(", ", activeMods) : vanillaStr;
+
+                    if (displayMods == vanillaStr) {
                         ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetColorU32(ImGuiCol.TextDisabled));
-                        ImGui.TextWrapped(piece.ModifyingModNames);
+                        ImGui.TextWrapped(displayMods);
                         ImGui.PopStyleColor();
                     } else {
                         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.4f, 0.8f, 1.0f, 1.0f));
-                        ImGui.TextWrapped(piece.ModifyingModNames);
+                        ImGui.TextWrapped(displayMods);
                         ImGui.PopStyleColor();
+                        if (ImGui.IsItemHovered()) {
+                            ImGui.SetTooltip(displayMods);
+                        }
                     }
 
                     if (this.isEditing) {
                         ImGui.TableNextColumn();
-                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.2f, 0.2f, 1.0f));
-                        if (ImGui.Button($"X##eq_{piece.ItemId}")) {
-                            pieceToRemove = piece;
+                        string btnIcon = piece.IsIgnored ? FontAwesomeIcon.EyeSlash.ToIconString() : FontAwesomeIcon.Eye.ToIconString();
+
+                        ImGui.PushFont(UiBuilder.IconFont);
+                        if (ImGui.Button($"{btnIcon}##eq_{piece.ItemId}")) {
+                            piece.IsIgnored = !piece.IsIgnored; // Toggle the state
                         }
-                        ImGui.PopStyleColor();
+                        ImGui.PopFont();
+                    }
+
+                    if (wasIgnored) {
+                        ImGui.PopStyleVar();
                     }
                 }
                 ImGui.EndTable();
-
-                if (pieceToRemove != null) {
-                    currentOutfit.Equipment?.Remove(pieceToRemove);
-                }
             }
 
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
+            // --- TABLE 2: REQUIRED MODS ---
             ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("OutfitDetails_ModsTitle"));
             ImGui.Spacing();
 
@@ -163,15 +194,20 @@ public class OutfitDetailsWindow {
                 ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColModName"), ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColInternalId"), ImGuiTableColumnFlags.WidthStretch);
                 if (this.isEditing) {
-                    ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColAction"), ImGuiTableColumnFlags.WidthFixed, 40f);
+                    ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColAction"), ImGuiTableColumnFlags.WidthFixed, 30f);
                 }
 
                 ImGui.TableHeadersRow();
 
                 var reqs = currentOutfit.RequiredMods ?? new();
-                OutfitModRequirement? modToRemove = null;
 
                 foreach (var req in reqs) {
+                    bool wasIgnored = req.IsIgnored;
+
+                    if (wasIgnored) {
+                        ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.4f);
+                    }
+
                     ImGui.TableNextRow();
 
                     ImGui.TableNextColumn();
@@ -184,18 +220,20 @@ public class OutfitDetailsWindow {
 
                     if (this.isEditing) {
                         ImGui.TableNextColumn();
-                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.2f, 0.2f, 1.0f));
-                        if (ImGui.Button($"X##mod_{req.ModId}")) {
-                            modToRemove = req;
+                        string btnIcon = req.IsIgnored ? FontAwesomeIcon.EyeSlash.ToIconString() : FontAwesomeIcon.Eye.ToIconString();
+
+                        ImGui.PushFont(UiBuilder.IconFont);
+                        if (ImGui.Button($"{btnIcon}##mod_{req.ModId}")) {
+                            req.IsIgnored = !req.IsIgnored; // Toggle the state
                         }
-                        ImGui.PopStyleColor();
+                        ImGui.PopFont();
+                    }
+
+                    if (wasIgnored) {
+                        ImGui.PopStyleVar();
                     }
                 }
                 ImGui.EndTable();
-
-                if (modToRemove != null) {
-                    currentOutfit.RequiredMods?.Remove(modToRemove);
-                }
             }
         }
         ImGui.End();
