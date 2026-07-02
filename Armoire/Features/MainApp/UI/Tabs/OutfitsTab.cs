@@ -4,6 +4,7 @@ using Armoire.Core.Localization;
 using Armoire.Features.Outfits.Presentation;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Components; // <-- NEW: Required for IconButtonWithText
 using System.Linq;
 using System.Numerics;
 
@@ -24,41 +25,52 @@ public class OutfitsTab {
     public void Draw() {
         ImGui.Spacing();
 
+        // --- SECTION 1: CREATION ---
         ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("Outfits_CreateTitle"));
         ImGui.SetWindowFontScale(1.0f);
 
-        ImGui.SetNextItemWidth(300f);
+        // Reduced width to let the UI breathe
+        ImGui.SetNextItemWidth(250f);
         ImGui.InputTextWithHint("##NewOutfitName", this.loc.GetString("Outfits_NameHint"), ref this.newOutfitName, 64);
         ImGui.SameLine();
 
-        if (ImGui.Button(this.loc.GetString("Outfits_CaptureBtn"))) {
+        // Add a "Camera" icon to the capture button using Dalamud's native component
+        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Camera, this.loc.GetString("Outfits_CaptureBtn"))) {
             if (!string.IsNullOrWhiteSpace(this.newOutfitName)) {
                 this.presenter.CreateOutfit(this.newOutfitName);
                 this.newOutfitName = string.Empty;
             }
         }
 
-        // Right-align the Import button dynamically
-        float importBtnWidth = ImGui.CalcTextSize(this.loc.GetString("Import_WindowTitle")).X + ImGui.GetStyle().FramePadding.X * 2;
+        ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
+
+        // --- SECTION 2: LIST AND IMPORT ---
+        ImGui.SetWindowFontScale(1.2f);
+        ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("Outfits_ListTitle"));
+        ImGui.SetWindowFontScale(1.0f);
+
+        // The Import button is now right-aligned on the same line as the list title
+        string importText = this.loc.GetString("Import_WindowTitle");
+        // Approximate width: Icon size (~24px) + spacing + text size + padding
+        float importBtnWidth = 24f + ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize(importText).X + (ImGui.GetStyle().FramePadding.X * 2);
+
         float alignX = ImGui.GetWindowContentRegionMax().X - importBtnWidth;
         if (alignX > ImGui.GetCursorPosX()) {
             ImGui.SameLine(alignX);
         } else {
+            // Fallback if the window is exceptionally narrow
             ImGui.SameLine();
         }
 
-        if (ImGui.Button(this.loc.GetString("Import_WindowTitle"))) {
+        // Draw the Import button using Dalamud's native component
+        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.FileImport, importText)) {
             this.importPresenter.Open();
         }
 
-        ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
-
-        ImGui.SetWindowFontScale(1.2f);
-        ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("Outfits_ListTitle"));
-        ImGui.SetWindowFontScale(1.0f);
         ImGui.Spacing();
 
+        // --- OUTFITS TABLE ---
         if (this.presenter.Outfits.Count == 0) {
             ImGui.TextDisabled(this.loc.GetString("Outfits_EmptyList"));
             return;
@@ -91,9 +103,9 @@ public class OutfitsTab {
                     if (activeReqsCount == 0) {
                         ImGui.TextDisabled(this.loc.GetString("Outfits_StatusNoMods"));
                     } else if (readiness.IsReady) {
-                        DrawIconText(FontAwesomeIcon.CheckCircle, new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), activeReqsCount).Replace("✅", "").Trim());
+                        DrawIconText(FontAwesomeIcon.CheckCircle, new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), activeReqsCount));
                     } else {
-                        DrawIconText(FontAwesomeIcon.ExclamationTriangle, new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusMissing"), readiness.MissingModNames.Count).Replace("⚠️", "").Trim());
+                        DrawIconText(FontAwesomeIcon.ExclamationTriangle, new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusMissing"), readiness.MissingModNames.Count));
                         if (ImGui.IsItemHovered()) {
                             ImGui.SetTooltip(this.loc.GetString("Outfits_TooltipMissing") + string.Join("\n", readiness.MissingModNames.Select(m => $"- {m}")));
                         }

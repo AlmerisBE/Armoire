@@ -4,6 +4,7 @@ using Armoire.Core.Localization;
 using Armoire.Core.UI;
 using Armoire.Features.DiagnosticsUI.Presentation;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using System.Numerics;
 
 public class PenumbraStatusView : IUiComponent {
@@ -45,13 +46,13 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_TotalIpcMods"), this.presenter.TotalIpcMods));
 
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_ConfiguredMods"), this.presenter.ConfiguredMods, this.presenter.ConfiguredModsMax));
-        ImGui.ProgressBar(this.presenter.GlobalDirectoryPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_GlobalDirectory"), this.presenter.GlobalDirectoryPercentage));
+        ImGui.ProgressBar(this.presenter.GlobalDirectoryPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_GlobalDirectory"), this.presenter.GlobalDirectoryPercentage.ToString("0.00")));
 
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_EnabledMods"), this.presenter.EnabledMods, this.presenter.EnabledModsMax));
-        ImGui.ProgressBar(this.presenter.CollectionPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_Collection"), this.presenter.CollectionPercentage));
+        ImGui.ProgressBar(this.presenter.CollectionPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_Collection"), this.presenter.CollectionPercentage.ToString("0.00")));
 
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_ConflictingMods"), this.presenter.ConflictingMods, this.presenter.ConflictingModsMax));
-        ImGui.ProgressBar(this.presenter.ActiveModsPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_ActiveMods"), this.presenter.ActiveModsPercentage));
+        ImGui.ProgressBar(this.presenter.ActiveModsPercentage / 100f, new Vector2(-1, 0), string.Format(this.loc.GetString("StatusView_ActiveMods"), this.presenter.ActiveModsPercentage.ToString("0.00")));
 
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
@@ -59,15 +60,20 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("StatusView_Hierarchy"));
         ImGui.SetWindowFontScale(1.0f);
+        ImGui.Spacing();
 
         if (this.presenter.ActiveCollections.Count == 0) {
             ImGui.TextDisabled(this.loc.GetString("StatusView_NoActiveCollection"));
         } else {
             foreach (var node in this.presenter.ActiveCollections) {
-                string prefix = node.IsInherited
-                    ? this.loc.GetString("StatusView_InheritedPrefix")
-                    : this.loc.GetString("StatusView_ActivePrefix");
-                ImGui.TextUnformatted($"{prefix}{node.Name}");
+                Dalamud.Interface.FontAwesomeIcon icon = node.IsInherited ? Dalamud.Interface.FontAwesomeIcon.AngleRight : Dalamud.Interface.FontAwesomeIcon.CaretRight;
+
+                ImGui.PushFont(Dalamud.Interface.UiBuilder.IconFont);
+                ImGui.TextUnformatted(icon.ToIconString());
+                ImGui.PopFont();
+
+                ImGui.SameLine();
+                ImGui.TextUnformatted(node.Name);
             }
         }
 

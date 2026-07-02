@@ -23,7 +23,7 @@ public class WindowManagerTests {
 
         var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
         var resolvedTab = new ResolvedTab(mockLocalization, mockMainPresenter);
-        var statsTab = new StatsTab(mockLocalization, mockMainPresenter, mockStatusPresenter);
+        var statsTab = new StatsTab(mockLocalization, mockMainPresenter, mockStatusPresenter, mockOutfitsPresenter);
         var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
         var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
 
