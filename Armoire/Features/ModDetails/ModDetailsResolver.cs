@@ -64,11 +64,6 @@ public class ModDetailsResolver : IModDetailsResolver {
         }
         // -----------------------------------------
 
-        var higherPriorityMods = currentState.EffectiveMods.Values
-            .Where(m => m.IsEnabled && m.Priority > activeModSettings.Priority)
-            .OrderByDescending(m => m.Priority)
-            .ToList();
-
         var rawSlots = new List<DetailedSlotState>();
 
         foreach (var path in targetPaths) {
@@ -83,16 +78,12 @@ public class ModDetailsResolver : IModDetailsResolver {
                 ItemLevel = resolvedData.ItemLevel
             };
 
-            foreach (var enemy in higherPriorityMods) {
-                if (this.scannerManager.ModCache.TryGetValue(enemy.Id, out var enemyCache)) {
-                    var enemyPaths = GetActivePathsForMod(enemyCache, enemy.Settings);
-
-                    if (enemyPaths.Contains(path, StringComparer.OrdinalIgnoreCase)) {
-                        slotState.IsConflicting = true;
-                        string priorityStr = string.Format(this.loc.GetString("ModDetails_PriorityLabel"), enemy.Priority);
-                        slotState.OverwrittenByMods.Add($"{enemy.Name}{priorityStr}");
-                        break;
-                    }
+            // This properly handles conflicts between mods with the EXACT SAME priority (e.g., Priority 0 vs Priority 0)
+            if (currentState.FileOwnership.TryGetValue(path, out string? winnerModId) && winnerModId != modId) {
+                slotState.IsConflicting = true;
+                if (currentState.EffectiveMods.TryGetValue(winnerModId, out var winnerMod)) {
+                    string priorityStr = string.Format(this.loc.GetString("ModDetails_PriorityLabel"), winnerMod.Priority);
+                    slotState.OverwrittenByMods.Add($"{winnerMod.Name}{priorityStr}");
                 }
             }
 
@@ -144,7 +135,6 @@ public class ModDetailsResolver : IModDetailsResolver {
 
                         if (this.scannerManager.ModCache.TryGetValue(otherMod.Id, out var otherCache)) {
                             var otherPaths = GetActivePathsForMod(otherCache, otherMod.Settings);
-
                             bool providesTexture = otherPaths.Any(p =>
                                 (p.EndsWith(".mtrl", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".tex", StringComparison.OrdinalIgnoreCase)) &&
                                 modelIds.Any(mId => p.Contains(mId, StringComparison.OrdinalIgnoreCase))

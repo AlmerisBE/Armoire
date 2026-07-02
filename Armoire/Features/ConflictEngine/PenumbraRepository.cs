@@ -183,7 +183,14 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         // Sort mods by priority (highest first)
-        evaluatedMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+        // If priorities are identical, fallback to alphabetical sorting to mimic Penumbra's deterministic behavior
+        evaluatedMods.Sort((a, b) => {
+            int priorityComparison = b.Priority.CompareTo(a.Priority);
+            if (priorityComparison != 0) {
+                return priorityComparison;
+            }
+            return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+        });
 
         foreach (var mod in evaluatedMods) {
             if (scannerCache.TryGetValue(mod.Id, out var cachedModData)) {
