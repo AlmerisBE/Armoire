@@ -16,6 +16,9 @@ using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Presentation;
 using Armoire.Features.ModDetails.UI;
 using Armoire.Features.ModSwapper;
+using Armoire.Features.Outfits;
+using Armoire.Features.Outfits.Presentation;
+using Armoire.Features.Outfits.UI;
 using Armoire.Features.PenumbraIpc;
 using Armoire.Features.VanillaSearch;
 using Armoire.Features.VanillaSearch.Presentation;
@@ -81,6 +84,7 @@ public static class ServiceConfigurator {
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<CommandRegistry>();
+        services.AddSingleton<OutfitRepository>();
     }
 
     private static void RegisterExternalIntegrations(IServiceCollection services) {
@@ -106,6 +110,8 @@ public static class ServiceConfigurator {
         services.AddSingleton<IConflictListPresenter, ConflictListPresenter>();
         services.AddSingleton<IModScannerPresenter, ModScannerPresenter>();
         services.AddSingleton<IPenumbraStatusPresenter, PenumbraStatusPresenter>();
+        services.AddSingleton<IOutfitsPresenter, OutfitsPresenter>();
+        services.AddSingleton<IOutfitDetailsPresenter, OutfitDetailsPresenter>();
     }
 
     private static void RegisterUiComponents(IServiceCollection services) {
@@ -115,12 +121,14 @@ public static class ServiceConfigurator {
         services.AddSingleton<ConflictListWindow>();
         services.AddSingleton<ModDetailsWindow>();
         services.AddSingleton<VanillaReplacementWindow>();
+        services.AddSingleton<OutfitDetailsWindow>();
 
         services.AddSingleton<HomeTab>();
         services.AddSingleton<ResolvedTab>();
         services.AddSingleton<StatsTab>();
         services.AddSingleton<ConfigTab>();
         services.AddSingleton<AboutTab>();
+        services.AddSingleton<OutfitsTab>();
     }
 
     private static void RegisterCommands(IServiceCollection services) {

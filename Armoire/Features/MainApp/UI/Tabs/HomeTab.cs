@@ -68,7 +68,7 @@ public class HomeTab {
                 ImGui.EndTable();
             }
         } else {
-            ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), "Tous vos mods actifs fonctionnent parfaitement ! Aucun conflit détecté.");
+            ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), this.loc.GetString("Main_HomeNoConflicts"));
         }
     }
 }

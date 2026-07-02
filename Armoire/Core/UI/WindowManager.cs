@@ -3,6 +3,7 @@ namespace Armoire.Core.UI;
 using Armoire.Features.DiagnosticsUI;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.ModDetails.UI;
+using Armoire.Features.Outfits.UI;
 using Armoire.Features.VanillaSearch.UI;
 using Dalamud.Interface.Windowing;
 using System;
@@ -14,6 +15,7 @@ public class WindowManager : IWindowManager, IDisposable {
     private readonly ModDetailsWindow modDetailsWindow;
     private readonly VanillaReplacementWindow vanillaReplacementWindow;
     private readonly ModScannerWindow modScannerWindow;
+    private readonly OutfitDetailsWindow outfitDetailsWindow;
 
     private readonly WindowSystem windowSystem;
 
@@ -22,12 +24,14 @@ public class WindowManager : IWindowManager, IDisposable {
         ConfigWindow configWindow,
         ModDetailsWindow modDetailsWindow,
         VanillaReplacementWindow vanillaReplacementWindow,
-        ModScannerWindow modScannerWindow) {
+        ModScannerWindow modScannerWindow,
+        OutfitDetailsWindow outfitDetailsWindow) {
         this.mainWindow = mainWindow;
         this.configWindow = configWindow;
         this.modDetailsWindow = modDetailsWindow;
         this.vanillaReplacementWindow = vanillaReplacementWindow;
         this.modScannerWindow = modScannerWindow;
+        this.outfitDetailsWindow = outfitDetailsWindow;
 
         this.windowSystem = new WindowSystem("ArmoireWindowSystem");
         this.windowSystem.AddWindow(this.mainWindow);
@@ -47,6 +51,7 @@ public class WindowManager : IWindowManager, IDisposable {
         this.modDetailsWindow.Draw();
         this.vanillaReplacementWindow.Draw();
         this.modScannerWindow.Draw();
+        this.outfitDetailsWindow.Draw();
     }
 
     public void Dispose() {

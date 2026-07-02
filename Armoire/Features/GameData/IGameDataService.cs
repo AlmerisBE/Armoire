@@ -11,4 +11,15 @@ public class ResolvedItem {
 
 public interface IGameDataService {
     ResolvedItem ResolveItem(string gamePath);
+
+    /// <summary>
+    /// Translates a game ItemId into its corresponding 3D Model ID (e.g., "e0123" or "w0050").
+    /// Returns an empty string if the item is not found or has no model.
+    /// </summary>
+    string GetModelIdFromItemId(uint itemId);
+
+    /// <summary>
+    /// Retrieves full item details directly from its ItemId.
+    /// </summary>
+    ResolvedItem? GetItemInfo(uint itemId);
 }

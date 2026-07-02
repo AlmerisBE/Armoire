@@ -6,6 +6,7 @@ using Armoire.Features.DiagnosticsUI.Presentation;
 using Armoire.Features.MainApp.Presentation;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.MainApp.UI.Tabs;
+using Armoire.Features.Outfits.Presentation;
 using NSubstitute;
 using Xunit;
 
@@ -16,12 +17,16 @@ public class WindowManagerTests {
         var mockLocalization = Substitute.For<ILocalizationService>();
         var mockMainPresenter = Substitute.For<IMainWindowPresenter>();
         var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
+        var mockOutfitsPresenter = Substitute.For<IOutfitsPresenter>();
+        var mockOutfitDetailsPresenter = Substitute.For<IOutfitDetailsPresenter>();
 
         var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
         var resolvedTab = new ResolvedTab(mockLocalization, mockMainPresenter);
         var statsTab = new StatsTab(mockLocalization, mockMainPresenter, mockStatusPresenter);
         var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
         var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
+
+        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter);
 
         var mainWindow = new MainWindow(
             mockLocalization,
@@ -30,7 +35,8 @@ public class WindowManagerTests {
             resolvedTab,
             statsTab,
             configTab,
-            aboutTab
+            aboutTab,
+            outfitsTab
         );
 
         var configWindow = new ConfigWindow();
@@ -41,7 +47,8 @@ public class WindowManagerTests {
             configWindow,
             null!, // modDetailsWindow
             null!, // vanillaReplacementWindow
-            null!  // modScannerWindow
+            null!, // modScannerWindow
+            null!  // outfitDetailsWindow (NOUVEAU)
         );
 
         var initialState = configWindow.IsOpen;

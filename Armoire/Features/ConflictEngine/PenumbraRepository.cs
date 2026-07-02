@@ -240,6 +240,9 @@ public class PenumbraRepository : IPenumbraRepository, IDisposable {
         }
 
         state.ConflictingMods.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        foreach (var kvp in globalFileOwnership) {
+            state.FileOwnership[kvp.Key] = kvp.Value.ModId;
+        }
         return state;
     }
 

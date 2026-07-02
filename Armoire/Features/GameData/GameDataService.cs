@@ -13,6 +13,8 @@ public class GameDataService : IGameDataService {
     private readonly ILocalizationService loc;
 
     private readonly Dictionary<string, (string Name, uint IconId, uint ItemId, byte EquipLevel, uint ItemLevel)> equipmentModelCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<uint, string> itemIdToModelIdCache = [];
+    private readonly Dictionary<uint, ResolvedItem> itemIdInfoCache = [];
 
     private readonly Regex equipmentPathRegex = new Regex(@"chara/equipment/(e\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private readonly Regex weaponPathRegex = new Regex(@"chara/weapon/(w\d{4})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -49,6 +51,15 @@ public class GameDataService : IGameDataService {
 
             if (!string.IsNullOrEmpty(modelId) && !string.IsNullOrEmpty(slotKey)) {
                 this.equipmentModelCache.TryAdd($"{modelId}_{slotKey}", (itemName, item.Icon, item.RowId, item.LevelEquip, item.LevelItem.RowId));
+                this.itemIdToModelIdCache.TryAdd(item.RowId, modelId);
+                this.itemIdInfoCache.TryAdd(item.RowId, new ResolvedItem {
+                    Name = itemName,
+                    IconId = item.Icon,
+                    ItemId = item.RowId,
+                    EquipLevel = item.LevelEquip,
+                    ItemLevel = item.LevelItem.RowId,
+                    SlotKey = slotKey
+                });
             }
         }
     }
@@ -186,5 +197,16 @@ public class GameDataService : IGameDataService {
         }
 
         return name;
+    }
+
+    public string GetModelIdFromItemId(uint itemId) {
+        if (this.itemIdToModelIdCache.TryGetValue(itemId, out var modelId)) {
+            return modelId;
+        }
+        return string.Empty;
+    }
+
+    public ResolvedItem? GetItemInfo(uint itemId) {
+        return this.itemIdInfoCache.TryGetValue(itemId, out var itemInfo) ? itemInfo : null;
     }
 }

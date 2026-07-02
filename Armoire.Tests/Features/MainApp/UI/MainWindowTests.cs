@@ -5,6 +5,7 @@ using Armoire.Features.DiagnosticsUI.Presentation;
 using Armoire.Features.MainApp.Presentation;
 using Armoire.Features.MainApp.UI;
 using Armoire.Features.MainApp.UI.Tabs;
+using Armoire.Features.Outfits.Presentation;
 using NSubstitute;
 using Xunit;
 
@@ -15,6 +16,8 @@ public class MainWindowTests {
         var mockLocalization = Substitute.For<ILocalizationService>();
         var mockMainPresenter = Substitute.For<IMainWindowPresenter>();
         var mockStatusPresenter = Substitute.For<IPenumbraStatusPresenter>();
+        var mockOutfitsPresenter = Substitute.For<IOutfitsPresenter>();
+        var mockOutfitDetailsPresenter = Substitute.For<IOutfitDetailsPresenter>();
 
         // Instantiate the tab components using our mocked dependencies
         var homeTab = new HomeTab(mockLocalization, mockMainPresenter);
@@ -22,6 +25,8 @@ public class MainWindowTests {
         var statsTab = new StatsTab(mockLocalization, mockMainPresenter, mockStatusPresenter);
         var configTab = new ConfigTab(mockLocalization, mockMainPresenter);
         var aboutTab = new AboutTab(mockLocalization, mockMainPresenter);
+
+        var outfitsTab = new OutfitsTab(mockLocalization, mockOutfitsPresenter, mockOutfitDetailsPresenter);
 
         // Inject all the newly required tabs into the MainWindow constructor
         var mainWindow = new MainWindow(
@@ -31,7 +36,8 @@ public class MainWindowTests {
             resolvedTab,
             statsTab,
             configTab,
-            aboutTab
+            aboutTab,
+            outfitsTab
         );
 
         bool eventTriggered = false;

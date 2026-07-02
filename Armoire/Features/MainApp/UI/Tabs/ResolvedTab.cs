@@ -19,7 +19,7 @@ public class ResolvedTab {
         var resolvedMods = this.presenter.ResolvedMods;
 
         if (resolvedMods.Count == 0) {
-            ImGui.TextDisabled("Vous n'avez résolu aucun conflit pour le moment.");
+            ImGui.TextDisabled(this.loc.GetString("Main_ResolvedEmpty"));
             return;
         }
 

@@ -19,6 +19,7 @@ public class MainWindow : Window, IDisposable {
     private readonly StatsTab statsTab;
     private readonly ConfigTab configTab;
     private readonly AboutTab aboutTab;
+    private readonly OutfitsTab outfitsTab;
 
     public event Action? OnConfigRequested;
 
@@ -29,7 +30,8 @@ public class MainWindow : Window, IDisposable {
         ResolvedTab resolvedTab,
         StatsTab statsTab,
         ConfigTab configTab,
-        AboutTab aboutTab) : base("Armoire", ImGuiWindowFlags.NoCollapse) {
+        AboutTab aboutTab,
+        OutfitsTab outfitsTab) : base("Armoire") {
         this.loc = loc;
         this.presenter = presenter;
         this.homeTab = homeTab;
@@ -40,6 +42,7 @@ public class MainWindow : Window, IDisposable {
 
         Size = new Vector2(850, 600);
         SizeCondition = ImGuiCond.FirstUseEver;
+        this.outfitsTab = outfitsTab;
     }
 
     public void InvokeConfigRequested() {
@@ -65,8 +68,13 @@ public class MainWindow : Window, IDisposable {
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Conflits résolus")) {
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabResolved"))) {
                 this.resolvedTab.Draw();
+                ImGui.EndTabItem();
+            }
+
+            if (ImGui.BeginTabItem(this.loc.GetString("Main_TabOutfits"))) {
+                this.outfitsTab.Draw();
                 ImGui.EndTabItem();
             }
 
