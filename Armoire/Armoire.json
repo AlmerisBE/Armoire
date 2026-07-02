@@ -2,7 +2,7 @@
   "Author": "Almeris",
   "Name": "Armoire",
   "InternalName": "Armoire",
-  "AssemblyVersion": "0.1.0.4",
+  "AssemblyVersion": "0.1.1.0",
   "Description": "Gestionnaire de tenues et résolution de conflits pour Penumbra.",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 15,

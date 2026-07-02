@@ -1,7 +1,8 @@
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 param (
     [string]$NewVersion = ""
 )
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # 1. Demande de la version si non fournie
 if ([string]::IsNullOrWhiteSpace($NewVersion)) {
