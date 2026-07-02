@@ -70,7 +70,11 @@ public class OutfitImportWindow {
                 }
 
                 // Table 1: Equipment
+                ImGui.SetWindowFontScale(1.2f);
                 ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), outfit.Name);
+                ImGui.SetWindowFontScale(1.0f);
+                ImGui.Spacing();
+
                 if (ImGui.BeginTable("ImportEquipTable", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 200))) {
                     ImGui.TableSetupScrollFreeze(0, 1);
                     ImGui.TableSetupColumn(this.loc.GetString("OutfitDetails_ColSlot"), ImGuiTableColumnFlags.WidthFixed, 130f);

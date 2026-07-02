@@ -37,7 +37,9 @@ public class PenumbraStatusView : IUiComponent {
         }
 
         // Mod Distribution Section
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("StatusView_ModDistribution"));
+        ImGui.SetWindowFontScale(1.0f);
         ImGui.Spacing();
 
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_TotalIpcMods"), this.presenter.TotalIpcMods));
@@ -54,7 +56,9 @@ public class PenumbraStatusView : IUiComponent {
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
         // Hierarchy Section
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("StatusView_Hierarchy"));
+        ImGui.SetWindowFontScale(1.0f);
 
         if (this.presenter.ActiveCollections.Count == 0) {
             ImGui.TextDisabled(this.loc.GetString("StatusView_NoActiveCollection"));

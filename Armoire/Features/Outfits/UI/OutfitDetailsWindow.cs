@@ -48,9 +48,27 @@ public class OutfitDetailsWindow {
                 this.isEditing = false;
             }
 
+            // --- BARRE D'ACTIONS HAUTE ---
             ImGui.TextDisabled(string.Format(this.loc.GetString("OutfitDetails_SavedOn"), currentOutfit.CreatedAt.LocalDateTime.ToString("dd/MM/yyyy HH:mm")));
 
-            ImGui.SameLine(ImGui.GetWindowContentRegionMax().X - (this.isEditing ? 120f : 370f));
+            // Dynamic exact right alignment for top buttons
+            float totalWidth;
+            if (this.isEditing) {
+                totalWidth = 100f; // Fixed size used for BtnDone
+            } else {
+                float b1 = ImGui.CalcTextSize(this.loc.GetString("OutfitDetails_BtnEdit")).X + ImGui.GetStyle().FramePadding.X * 2;
+                float b2 = ImGui.CalcTextSize(this.loc.GetString("OutfitDetails_BtnActivate")).X + ImGui.GetStyle().FramePadding.X * 2;
+                float b3 = ImGui.CalcTextSize(this.loc.GetString("OutfitDetails_BtnShare")).X + ImGui.GetStyle().FramePadding.X * 2;
+                float b4 = ImGui.CalcTextSize(this.loc.GetString("OutfitDetails_BtnDelete")).X + ImGui.GetStyle().FramePadding.X * 2;
+                totalWidth = b1 + b2 + b3 + b4 + (ImGui.GetStyle().ItemSpacing.X * 3);
+            }
+
+            float alignX = ImGui.GetWindowContentRegionMax().X - totalWidth;
+            if (alignX > ImGui.GetCursorPosX()) {
+                ImGui.SameLine(alignX);
+            } else {
+                ImGui.SameLine(); // Fallback if window is too small
+            }
 
             if (this.isEditing) {
                 if (ImGui.Button(this.loc.GetString("OutfitDetails_BtnDone"), new Vector2(100, 0))) {
@@ -86,6 +104,11 @@ public class OutfitDetailsWindow {
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
             // --- TABLE 1: EQUIPMENT ---
+            ImGui.SetWindowFontScale(1.2f);
+            ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), "Équipement visuel");
+            ImGui.SetWindowFontScale(1.0f);
+            ImGui.Spacing();
+
             int equipCols = this.isEditing ? 5 : 4;
             if (ImGui.BeginTable("OutfitDetailsEquipTable", equipCols, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY, new Vector2(0, 250))) {
                 ImGui.TableSetupScrollFreeze(0, 1);
@@ -185,7 +208,9 @@ public class OutfitDetailsWindow {
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
             // --- TABLE 2: REQUIRED MODS ---
+            ImGui.SetWindowFontScale(1.2f);
             ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("OutfitDetails_ModsTitle"));
+            ImGui.SetWindowFontScale(1.0f);
             ImGui.Spacing();
 
             int modCols = this.isEditing ? 3 : 2;

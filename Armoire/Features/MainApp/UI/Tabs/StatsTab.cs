@@ -21,7 +21,9 @@ public class StatsTab {
         ImGui.Spacing();
 
         // Render the funnel metrics bars
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("StatusView_ModDistribution"));
+        ImGui.SetWindowFontScale(1.0f);
         ImGui.Spacing();
 
         ImGui.TextUnformatted(string.Format(this.loc.GetString("StatusView_TotalIpcMods"), this.statusPresenter.TotalIpcMods));
@@ -43,7 +45,9 @@ public class StatsTab {
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
         // Active collection architecture hierarchy tree list
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("StatusView_Hierarchy"));
+        ImGui.SetWindowFontScale(1.0f);
         if (this.statusPresenter.ActiveCollections.Count == 0) {
             ImGui.TextDisabled(this.loc.GetString("StatusView_NoActiveCollection"));
         } else {

@@ -2,9 +2,8 @@ namespace Armoire.Features.MainApp.UI;
 
 using Armoire.Core.Localization;
 using Armoire.Features.MainApp.Presentation;
-using Armoire.Features.MainApp.UI.Tabs; // NEW: Tab namespaces
+using Armoire.Features.MainApp.UI.Tabs;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using System;
 using System.Numerics;
@@ -50,14 +49,10 @@ public class MainWindow : Window, IDisposable {
     }
 
     public override void Draw() {
-        // Grand header greeting the character
+        // Grand header greeting the character (Larger Font)
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), string.Format(this.loc.GetString("Main_Welcome"), this.presenter.ConnectedCharacter));
-
-        // Configuration shortcut gear top-right
-        ImGui.SameLine(ImGui.GetWindowWidth() - ImGui.GetStyle().WindowPadding.X - 30);
-        if (ImGui.Button(Dalamud.Interface.FontAwesomeIcon.Cog.ToIconString())) {
-            OnConfigRequested?.Invoke();
-        }
+        ImGui.SetWindowFontScale(1.0f);
 
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 

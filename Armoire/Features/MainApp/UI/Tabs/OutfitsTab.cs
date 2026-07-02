@@ -1,10 +1,9 @@
 ﻿namespace Armoire.Features.MainApp.UI.Tabs;
 
 using Armoire.Core.Localization;
-using Armoire.Features.Outfits.Models;
 using Armoire.Features.Outfits.Presentation;
 using Dalamud.Bindings.ImGui;
-using System.Collections.Generic;
+using Dalamud.Interface;
 using System.Linq;
 using System.Numerics;
 
@@ -25,7 +24,10 @@ public class OutfitsTab {
     public void Draw() {
         ImGui.Spacing();
 
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("Outfits_CreateTitle"));
+        ImGui.SetWindowFontScale(1.0f);
+
         ImGui.SetNextItemWidth(300f);
         ImGui.InputTextWithHint("##NewOutfitName", this.loc.GetString("Outfits_NameHint"), ref this.newOutfitName, 64);
         ImGui.SameLine();
@@ -36,14 +38,25 @@ public class OutfitsTab {
                 this.newOutfitName = string.Empty;
             }
         }
-        ImGui.SameLine();
+
+        // Right-align the Import button dynamically
+        float importBtnWidth = ImGui.CalcTextSize(this.loc.GetString("Import_WindowTitle")).X + ImGui.GetStyle().FramePadding.X * 2;
+        float alignX = ImGui.GetWindowContentRegionMax().X - importBtnWidth;
+        if (alignX > ImGui.GetCursorPosX()) {
+            ImGui.SameLine(alignX);
+        } else {
+            ImGui.SameLine();
+        }
+
         if (ImGui.Button(this.loc.GetString("Import_WindowTitle"))) {
             this.importPresenter.Open();
         }
 
         ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
 
+        ImGui.SetWindowFontScale(1.2f);
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1.0f, 1.0f), this.loc.GetString("Outfits_ListTitle"));
+        ImGui.SetWindowFontScale(1.0f);
         ImGui.Spacing();
 
         if (this.presenter.Outfits.Count == 0) {
@@ -55,8 +68,8 @@ public class OutfitsTab {
             try {
                 ImGui.TableSetupScrollFreeze(0, 1);
                 ImGui.TableSetupColumn(this.loc.GetString("Outfits_ColName"), ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn(this.loc.GetString("Outfits_ColMods"), ImGuiTableColumnFlags.WidthFixed, 150f);
-                ImGui.TableSetupColumn(this.loc.GetString("Outfits_ColActions"), ImGuiTableColumnFlags.WidthFixed, 250f);
+                ImGui.TableSetupColumn(this.loc.GetString("Outfits_ColMods"), ImGuiTableColumnFlags.WidthFixed, 160f);
+                ImGui.TableSetupColumn(this.loc.GetString("Outfits_ColActions"), ImGuiTableColumnFlags.WidthFixed, 220f);
                 ImGui.TableHeadersRow();
 
                 foreach (var outfit in this.presenter.Outfits.ToList()) {
@@ -73,22 +86,34 @@ public class OutfitsTab {
                     // Column 2: Readiness Status
                     ImGui.TableNextColumn();
                     var readiness = this.presenter.CheckOutfitReadiness(outfit);
-
                     int activeReqsCount = outfit.RequiredMods?.Count(r => !r.IsIgnored) ?? 0;
 
                     if (activeReqsCount == 0) {
                         ImGui.TextDisabled(this.loc.GetString("Outfits_StatusNoMods"));
                     } else if (readiness.IsReady) {
-                        ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), activeReqsCount));
+                        DrawIconText(FontAwesomeIcon.CheckCircle, new Vector4(0.2f, 1.0f, 0.2f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusReady"), activeReqsCount).Replace("✅", "").Trim());
                     } else {
-                        ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusMissing"), readiness.MissingModNames.Count));
-
+                        DrawIconText(FontAwesomeIcon.ExclamationTriangle, new Vector4(1.0f, 0.6f, 0.0f, 1.0f), string.Format(this.loc.GetString("Outfits_StatusMissing"), readiness.MissingModNames.Count).Replace("⚠️", "").Trim());
                         if (ImGui.IsItemHovered()) {
                             ImGui.SetTooltip(this.loc.GetString("Outfits_TooltipMissing") + string.Join("\n", readiness.MissingModNames.Select(m => $"- {m}")));
                         }
                     }
 
+                    // Column 3: Actions
                     ImGui.TableNextColumn();
+
+                    // Dynamic exact right alignment for the action buttons
+                    float b1 = ImGui.CalcTextSize(this.loc.GetString("Outfits_BtnActivate")).X + ImGui.GetStyle().FramePadding.X * 2;
+                    float b2 = ImGui.CalcTextSize(this.loc.GetString("Outfits_BtnShare")).X + ImGui.GetStyle().FramePadding.X * 2;
+                    float b3 = ImGui.CalcTextSize(this.loc.GetString("Outfits_BtnDelete")).X + ImGui.GetStyle().FramePadding.X * 2;
+                    float spacing = ImGui.GetStyle().ItemSpacing.X;
+                    float totalW = b1 + b2 + b3 + (spacing * 2);
+
+                    float availX = ImGui.GetContentRegionAvail().X;
+                    if (availX > totalW) {
+                        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + availX - totalW);
+                    }
+
                     if (ImGui.Button($"{this.loc.GetString("Outfits_BtnActivate")}##{outfit.Id}")) {
                         this.presenter.ActivateOutfit(outfit);
                     }
@@ -116,36 +141,11 @@ public class OutfitsTab {
         }
     }
 
-    private void DrawRequirementAnalysisTable(IReadOnlyList<ModRequirementAnalysis> analysisResult) {
-        if (ImGui.BeginTable("ImportAnalysisTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg)) {
-            ImGui.TableSetupColumn("Nom du Mod", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Auteur (Aide à la recherche)", ImGuiTableColumnFlags.WidthStretch);
-            ImGui.TableSetupColumn("Statut", ImGuiTableColumnFlags.WidthFixed, 200f);
-            ImGui.TableHeadersRow();
-
-            foreach (var item in analysisResult) {
-                ImGui.TableNextRow();
-
-                ImGui.TableNextColumn();
-                ImGui.TextUnformatted(item.Requirement.Name);
-
-                ImGui.TableNextColumn();
-                ImGui.TextDisabled(string.IsNullOrEmpty(item.Requirement.Author) ? "Inconnu" : item.Requirement.Author);
-
-                ImGui.TableNextColumn();
-                switch (item.Status) {
-                    case ModRequirementStatus.Ready:
-                        ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), $"✅ {item.DetailMessage}");
-                        break;
-                    case ModRequirementStatus.DisabledOrConflicting:
-                        ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), $"⚠️ {item.DetailMessage}");
-                        break;
-                    case ModRequirementStatus.Missing:
-                        ImGui.TextColored(new Vector4(1.0f, 0.2f, 0.2f, 1.0f), $"❌ {item.DetailMessage}");
-                        break;
-                }
-            }
-            ImGui.EndTable();
-        }
+    private void DrawIconText(FontAwesomeIcon icon, Vector4 color, string text) {
+        ImGui.PushFont(Dalamud.Interface.UiBuilder.IconFont);
+        ImGui.TextColored(color, icon.ToIconString());
+        ImGui.PopFont();
+        ImGui.SameLine();
+        ImGui.TextColored(color, text);
     }
 }
