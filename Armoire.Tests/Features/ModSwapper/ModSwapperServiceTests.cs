@@ -4,6 +4,7 @@ using Armoire.Features.LocalScanner;
 using Armoire.Features.LocalScanner.Models;
 using Armoire.Features.ModSwapper;
 using Armoire.Features.ModSwapper.Engines;
+using Armoire.Features.ModSwapper.Patchers;
 using Armoire.Features.PenumbraIpc;
 using Dalamud.Plugin.Services;
 using NSubstitute;
@@ -20,7 +21,9 @@ public class ModSwapperServiceTests : IDisposable {
     private readonly IModScannerManager mockScanner;
     private readonly IPenumbraClient mockPenumbra;
     private readonly ArmoireConfiguration mockConfiguration;
-    private readonly IJsonMutationEngine mockJsonMutationEngine;
+
+    // We instantiate the REAL JSON Engine to test the actual file manipulation logic
+    private readonly JsonMutationEngine realJsonEngine;
 
     public ModSwapperServiceTests() {
         this.tempRootDirectory = Path.GetTempPath();
@@ -33,7 +36,6 @@ public class ModSwapperServiceTests : IDisposable {
         this.mockScanner = Substitute.For<IModScannerManager>();
         this.mockPenumbra = Substitute.For<IPenumbraClient>();
         this.mockConfiguration = Substitute.For<ArmoireConfiguration>();
-        this.mockJsonMutationEngine = Substitute.For<IJsonMutationEngine>();
 
         this.mockPenumbra.GetModDirectory().Returns(this.tempRootDirectory);
 
@@ -41,6 +43,15 @@ public class ModSwapperServiceTests : IDisposable {
             { this.modFolderName, new ArmoireModCacheEntry() }
         };
         this.mockScanner.ModCache.Returns(fakeCache);
+
+        var mockBinaryPatcher = Substitute.For<IBinaryPatcher>();
+
+        // Ensure the fake patcher returns a string so the JSON engine considers the file "patched"
+        mockBinaryPatcher
+            .PatchBinaryFile(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(callInfo => "patched_mock_file.mdl");
+
+        this.realJsonEngine = new JsonMutationEngine(mockBinaryPatcher, this.mockLog);
     }
 
     public void Dispose() {
@@ -52,7 +63,8 @@ public class ModSwapperServiceTests : IDisposable {
     [Fact]
     public void PerformSwap_WithOptionGroups_ReplacesPathsInAllJsonFiles() {
         // Arrange
-        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration, this.mockJsonMutationEngine);
+        // Inject the REAL JsonEngine into the Swapper to test the integration
+        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration, this.realJsonEngine);
 
         // 1. Create default_mod.json
         string defaultPath = Path.Combine(this.tempModDirectory, "default_mod.json");
@@ -95,8 +107,7 @@ public class ModSwapperServiceTests : IDisposable {
     [Fact]
     public void ResetMod_WithMultipleBackups_RestoresAllOriginalJsonFiles() {
         // Arrange
-        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration, this.mockJsonMutationEngine);
-
+        var swapper = new ModSwapperService(this.mockScanner, this.mockLog, this.mockPenumbra, this.mockConfiguration, this.realJsonEngine);
         string defaultPath = Path.Combine(this.tempModDirectory, "default_mod.json");
         string groupPath = Path.Combine(this.tempModDirectory, "group_001.json");
 

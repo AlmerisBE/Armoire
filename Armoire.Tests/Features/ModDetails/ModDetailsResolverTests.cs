@@ -84,10 +84,10 @@ public class ModDetailsResolverTests {
         });
 
         var state = new EffectiveCollectionState();
-        // ModA has a low priority (5)
         state.EffectiveMods["ModA"] = new PenumbraMod { Id = "ModA", Name = "Victim Mod", IsEnabled = true, Priority = 5 };
-        // ModB modifies the same file, is enabled, and has a higher priority (10)
         state.EffectiveMods["ModB"] = new PenumbraMod { Id = "ModB", Name = "Winner Mod", IsEnabled = true, Priority = 10 };
+
+        state.FileOwnership["chara/equipment/e0123/model/c0101e0123_top.mdl"] = new HashSet<string> { "ModA", "ModB" };
 
         var resolver = new ModDetailsResolver(this.mockScanner, this.mockGameData, this.mockLoc, this.realConfig);
 
