@@ -66,4 +66,5 @@ public class MainWindowPresenter : IMainWindowPresenter {
     public bool IsModActivelyPatched(string modId) => this.conflictPresenter.IsModActivelyPatched(modId);
     public void ResetMod(string modId) => this.conflictPresenter.ResetMod(modId);
     public void RestoreMod(string modId, Dictionary<string, string> swaps) => this.conflictPresenter.RestoreMod(modId, swaps);
+    public void EquipMod(string modId) => this.modDetailsPresenter.EquipMod(modId);
 }

@@ -111,6 +111,19 @@ public class ModDetailsWindow {
         if (ImGui.Button("Réinitialiser le mod (Paramètres par défaut)")) {
             this.presenter.ResetCurrentMod();
         }
+
+        ImGui.Spacing(); ImGui.Separator();
+        ImGui.Spacing();
+
+        // Add the new Equip button
+        if (ImGui.Button("Équiper tout le mod")) {
+            this.presenter.EquipCurrentMod();
+        }
+        ImGui.SameLine();
+
+        if (ImGui.Button("Réinitialiser le mod (Paramètres par défaut)")) {
+            this.presenter.ResetCurrentMod();
+        }
     }
 
     private void DrawSpecificSlot(string slotKey, string slotDisplayName) {

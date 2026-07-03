@@ -31,4 +31,5 @@ public interface IMainWindowPresenter {
     bool IsModActivelyPatched(string modId);
     void ResetMod(string modId);
     void RestoreMod(string modId, Dictionary<string, string> swaps);
+    void EquipMod(string modId);
 }

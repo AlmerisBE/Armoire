@@ -119,4 +119,31 @@ public class ModDetailsPresenter : IModDetailsPresenter {
     public void Dispose() {
         this.syncManager.OnStatusUpdated -= RefreshData;
     }
+
+    public void EquipMod(string modId) {
+        if (this.currentGlobalState == null) {
+            return;
+        }
+
+        // Resolve the mod details to get the translated Item IDs
+        var state = this.resolver.ResolveModDetails(modId, this.currentGlobalState);
+        if (state != null) {
+            // Group by slot to avoid equipping multiple items on the same slot (e.g., if a mod edits two rings)
+            var itemsToEquip = state.ReplacedSlots
+                .Where(s => s.ItemId > 0)
+                .GroupBy(s => s.SlotCategory)
+                .Select(g => g.First())
+                .ToList();
+
+            foreach (var item in itemsToEquip) {
+                this.glamourerClient.EquipItem(item.ItemId, item.SlotCategory);
+            }
+        }
+    }
+
+    public void EquipCurrentMod() {
+        if (this.CurrentState != null) {
+            EquipMod(this.CurrentState.ModId);
+        }
+    }
 }

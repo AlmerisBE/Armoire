@@ -16,6 +16,8 @@ using Armoire.Features.ModDetails;
 using Armoire.Features.ModDetails.Presentation;
 using Armoire.Features.ModDetails.UI;
 using Armoire.Features.ModSwapper;
+using Armoire.Features.ModSwapper.Engines;
+using Armoire.Features.ModSwapper.Patchers;
 using Armoire.Features.Outfits;
 using Armoire.Features.Outfits.Presentation;
 using Armoire.Features.Outfits.UI;
@@ -100,6 +102,10 @@ public static class ServiceConfigurator {
         services.AddSingleton<IModScannerManager, ModScannerManager>();
         services.AddSingleton<IModDetailsResolver, ModDetailsResolver>();
         services.AddSingleton<IVanillaSearchService, VanillaSearchService>();
+
+        services.AddSingleton<IBinaryPatcher, BinaryPatcher>();
+        services.AddSingleton<IJsonMutationEngine, JsonMutationEngine>();
+
         services.AddSingleton<IModSwapperService, ModSwapperService>();
     }
 

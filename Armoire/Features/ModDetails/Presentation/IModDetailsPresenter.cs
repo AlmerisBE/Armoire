@@ -39,4 +39,14 @@ public interface IModDetailsPresenter : IDisposable {
     /// Stores the user's texture provider selection in the current session.
     /// </summary>
     void SetSelectedProvider(string slotKey, string providerId);
+
+    /// <summary>
+    /// Equips all items modified by the specified mod via Glamourer.
+    /// </summary>
+    void EquipMod(string modId);
+
+    /// <summary>
+    /// Equips all items modified by the currently inspected mod.
+    /// </summary>
+    void EquipCurrentMod();
 }

@@ -3,7 +3,6 @@
 using Armoire.Core.Localization;
 using Armoire.Features.MainApp.Presentation;
 using Dalamud.Bindings.ImGui;
-using System.Numerics;
 
 public class ResolvedTab {
     private readonly ILocalizationService loc;
@@ -36,7 +35,9 @@ public class ResolvedTab {
             ImGui.TableSetupScrollFreeze(0, 1);
             ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColModName"), ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColState"), ImGuiTableColumnFlags.WidthFixed, 150f);
-            ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColAction"), ImGuiTableColumnFlags.WidthFixed, 100f);
+
+            // Increased width to accommodate the new Equip button
+            ImGui.TableSetupColumn(this.loc.GetString("Conflict_ColAction"), ImGuiTableColumnFlags.WidthFixed, 180f);
             ImGui.TableHeadersRow();
 
             foreach (var kvp in resolvedMods) {
@@ -57,15 +58,22 @@ public class ResolvedTab {
                 bool isPatched = this.presenter.IsModActivelyPatched(modId);
 
                 if (isPatched) {
-                    ImGui.TextColored(new Vector4(0.2f, 1.0f, 0.2f, 1.0f), this.loc.GetString("Conflict_StateActive"));
+                    ImGui.TextColored(new System.Numerics.Vector4(0.2f, 1.0f, 0.2f, 1.0f), this.loc.GetString("Conflict_StateActive"));
                 } else {
-                    ImGui.TextColored(new Vector4(1.0f, 0.6f, 0.0f, 1.0f), this.loc.GetString("Conflict_StateUpdate"));
+                    ImGui.TextColored(new System.Numerics.Vector4(1.0f, 0.6f, 0.0f, 1.0f), this.loc.GetString("Conflict_StateUpdate"));
                     if (ImGui.IsItemHovered()) {
                         ImGui.SetTooltip(this.loc.GetString("Conflict_TooltipUpdate"));
                     }
                 }
 
                 ImGui.TableNextColumn();
+
+                // Add the new Equip button
+                if (ImGui.Button($"Équiper##equip_{modId}")) {
+                    this.presenter.EquipMod(modId);
+                }
+                ImGui.SameLine();
+
                 if (isPatched) {
                     if (ImGui.Button($"{this.loc.GetString("Conflict_BtnReset")}##{modId}")) {
                         this.presenter.ResetMod(modId);
